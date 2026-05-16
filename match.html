@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>議親室 — 宗族之書</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* 議親室專屬樣式 — 沿用亂點鴛鴦譜的卡片質感,但配色貼合宗族之書 */
+    .match-page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+    .match-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 18px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .match-kicker {
+      font-size: 12px;
+      letter-spacing: .28em;
+      color: #8b7355;
+      margin: 0 0 8px;
+    }
+    .match-header h1 {
+      font-size: 30px;
+      margin: 0;
+      letter-spacing: -0.02em;
+    }
+    .match-subtitle {
+      max-width: 680px;
+      color: #6b5b48;
+      margin: 12px 0 0;
+      font-size: 14px;
+    }
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .match-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 22px;
+      align-items: start;
+    }
+    .match-card {
+      background: #fffdf8;
+      border: 1px solid #d4c5a3;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .two-col label {
+      display: block;
+      font-size: 13px;
+      color: #8b7355;
+      margin-bottom: 6px;
+    }
+    .person-card {
+      margin-top: 10px;
+      padding: 12px;
+      background: #f7f1e3;
+      border-radius: 12px;
+      font-size: 13px;
+      white-space: pre-wrap;
+      line-height: 1.7;
+      min-height: 100px;
+    }
+    .case-card {
+      padding: 18px;
+      border: 1px solid #d4c5a3;
+      border-radius: 16px;
+      background: #fef9ed;
+      margin-top: 18px;
+    }
+    .case-card h2 {
+      margin: 4px 0 10px;
+      font-size: 20px;
+    }
+    pre.summary {
+      white-space: pre-wrap;
+      margin: 0;
+      background: #fffdf8;
+      border-radius: 12px;
+      padding: 12px;
+      color: #4a3f33;
+      font-size: 14px;
+      line-height: 1.8;
+      font-family: inherit;
+    }
+    .action-panel {
+      margin-top: 18px;
+      padding: 16px;
+      background: #f7f1e3;
+      border-radius: 16px;
+    }
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .action-btn {
+      text-align: left;
+      border: 1px solid #c9b88a;
+      border-radius: 12px;
+      background: #fffdf8;
+      padding: 12px;
+      cursor: pointer;
+      min-height: 52px;
+      font: inherit;
+      transition: .15s ease;
+      color: #4a3f33;
+    }
+    .action-btn:hover {
+      background: #4a3f33;
+      color: #fffdf8;
+    }
+    .action-btn.pending {
+      background: #fef3c7;
+      border-color: #b8860b;
+      color: #4a3f33;
+    }
+    .pending-note {
+      font-size: 11px;
+      color: #b8860b;
+      margin-left: 4px;
+    }
+    .input-panel {
+      margin-top: 12px;
+      padding: 14px;
+      background: rgba(254,243,199,.5);
+      border: 1px solid #e2c98c;
+      border-radius: 14px;
+    }
+    .input-panel.hidden { display: none; }
+    .input-panel-title {
+      font-size: 11px;
+      color: #b8860b;
+      font-weight: 700;
+      letter-spacing: .15em;
+      margin-bottom: 10px;
+    }
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .input-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+    .input-grid label {
+      display: block;
+      font-size: 12px;
+      color: #8b7355;
+      margin-bottom: 4px;
+    }
+    .input-grid input, .input-grid select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #c9b88a;
+      border-radius: 10px;
+      background: #fffdf8;
+      font: inherit;
+    }
+    .confirm-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .history {
+      margin-top: 18px;
+    }
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .history-header h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+    .small-muted {
+      color: #8b7355;
+      font-size: 12px;
+    }
+    .chapter {
+      border: 1px solid #d4c5a3;
+      background: #fffdf8;
+      border-radius: 14px;
+      padding: 12px;
+      font-size: 13px;
+      margin-bottom: 8px;
+      line-height: 1.7;
+    }
+    .chapter.event {
+      background: #fef9ed;
+      border-color: #e2c98c;
+    }
+    .chapter-title {
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .reaction-box {
+      margin-top: 8px;
+      background: #f7f1e3;
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+    .reaction-title {
+      font-weight: 700;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+    .side-stack {
+      display: grid;
+      gap: 16px;
+    }
+    .note-list {
+      padding-left: 0;
+      margin: 0;
+      list-style: none;
+      color: #6b5b48;
+      font-size: 13px;
+    }
+    .note-list li { margin-bottom: 6px; }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #6b5b48;
+    }
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.4);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 18px;
+      z-index: 999;
+    }
+    .modal-backdrop.active { display: flex; }
+    .modal-inner {
+      width: min(900px, 100%);
+      max-height: 86vh;
+      background: #fffdf8;
+      border-radius: 18px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      padding: 14px;
+      border-bottom: 1px solid #d4c5a3;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h3 { margin: 0; font-size: 16px; }
+    .modal-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 10px;
+      border-bottom: 1px solid #d4c5a3;
+    }
+    .tab {
+      border: none;
+      border-radius: 10px;
+      padding: 6px 12px;
+      background: #f7f1e3;
+      cursor: pointer;
+      font: inherit;
+      color: #4a3f33;
+    }
+    .tab.active { background: #4a3f33; color: #fffdf8; }
+    .modal-search {
+      display: flex;
+      gap: 6px;
+      padding: 10px;
+    }
+    .modal-search input, .modal-search select {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #c9b88a;
+      border-radius: 10px;
+      background: #fffdf8;
+      font: inherit;
+    }
+    .modal-body {
+      padding: 10px;
+      overflow: auto;
+    }
+    .archive-item {
+      border: 1px solid #d4c5a3;
+      background: #fffdf8;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+    .archive-item.event-archive { background: #fef9ed; }
+    .archive-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: start;
+    }
+    .archive-name { font-weight: 700; font-size: 15px; }
+    .archive-sub { color: #8b7355; font-size: 12px; margin-top: 2px; }
+    .archive-pre {
+      white-space: pre-wrap;
+      background: #f7f1e3;
+      border-radius: 10px;
+      padding: 8px 10px;
+      margin-top: 8px;
+      color: #4a3f33;
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 1.7;
+    }
+    .suggestion-score { color: #8b7355; font-size: 12px; margin-top: 2px; }
+    .reason { font-size: 13px; margin-top: 6px; line-height: 1.6; }
+    .concern-label { color: #b45309; }
+    .empty {
+      text-align: center;
+      color: #8b7355;
+      padding: 20px;
+      font-size: 13px;
+    }
+    .hidden { display: none !important; }
+    select#aPerson, select#bPerson {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #c9b88a;
+      border-radius: 10px;
+      background: #fffdf8;
+      font: inherit;
+    }
+    @media (max-width: 900px) {
+      .match-page { padding: 16px; }
+      .match-grid { grid-template-columns: 1fr; }
+      .two-col, .actions, .input-grid, .input-grid.three { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="match-page">
+    <section class="match-header">
+      <div>
+        <p class="match-kicker">MATCHMAKING CASE FLOW</p>
+        <h1>議親室</h1>
+        <p class="match-subtitle">案件流程:議親 → 定親(寫入族譜)→ 婚期 → 成婚 → 婚後事件。處理結果會直接同步到宗族之書。</p>
+      </div>
+      <div class="toolbar">
+        <label class="toggle-row">
+          <input type="checkbox" id="forcePickToggle" />
+          強推(可挑任何在世人物)
+        </label>
+        <button class="btn primary-btn" id="randomizeBtn">隨機開案</button>
+        <button class="btn" id="rollBtn">擲一下</button>
+        <button class="btn" id="archiveBtn">翻檔案</button>
+        <button class="btn back-btn" onclick="window.location='index.html'">← 返回主頁</button>
+      </div>
+    </section>
+
+    <section class="match-grid">
+      <div class="match-card">
+        <div class="two-col">
+          <div>
+            <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+              <label>人物 A</label>
+              <button class="btn" id="suggestABtn" style="font-size:12px;padding:6px 10px;">看誰適合 A</button>
+            </div>
+            <label style="font-size:11px;color:#8b7355;margin-top:4px;">家族篩選</label>
+            <select id="aFamilyFilter"></select>
+            <label style="font-size:11px;color:#8b7355;margin-top:8px;">人物</label>
+            <select id="aPerson"></select>
+            <pre class="person-card" id="aInfo"></pre>
+          </div>
+          <div>
+            <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+              <label>人物 B</label>
+              <button class="btn" id="suggestBBtn" style="font-size:12px;padding:6px 10px;">看誰適合 B</button>
+            </div>
+            <label style="font-size:11px;color:#8b7355;margin-top:4px;">家族篩選</label>
+            <select id="bFamilyFilter"></select>
+            <label style="font-size:11px;color:#8b7355;margin-top:8px;">人物</label>
+            <select id="bPerson"></select>
+            <pre class="person-card" id="bInfo"></pre>
+          </div>
+        </div>
+
+        <div class="case-card">
+          <div class="small-muted">系統判斷</div>
+          <h2 id="caseTitle"></h2>
+          <pre class="summary" id="caseSummary"></pre>
+        </div>
+
+        <div class="action-panel">
+          <label style="font-size:13px;color:#8b7355;">目前合理操作(按階段顯示)</label>
+          <div class="actions" id="actions"></div>
+
+          <div class="input-panel hidden" id="inputPanel">
+            <div class="input-panel-title">這一步的細節</div>
+            <div id="dynamicInputs"></div>
+            <div class="confirm-row">
+              <button type="button" class="btn primary-btn" id="confirmActionBtn" onclick="matchConfirm()">確認執行</button>
+              <button type="button" class="btn" id="cancelActionBtn" onclick="matchCancel()">取消</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="match-card history" style="margin-top:18px;padding:14px;">
+          <div class="history-header">
+            <h3>案卷進展</h3>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="small-muted" id="historyCount">共 0 筆</span>
+              <button class="btn" id="clearChaptersBtn" style="font-size:11px;padding:4px 8px;">清空案卷</button>
+            </div>
+          </div>
+          <div id="chapters"></div>
+        </div>
+      </div>
+
+      <aside class="side-stack">
+        <div class="match-card">
+          <h3 style="margin-top:0;">提醒</h3>
+          <ul class="note-list">
+            <li>· <strong>口頭議親</strong>不寫入族譜,只記在案卷上</li>
+            <li>· <strong>正式定親</strong>會在族譜寫入「訂婚」紀錄</li>
+            <li>· <strong>成婚</strong>會補上 marryYear,類型改為平妻／妾／繼室</li>
+            <li>· 駁回／悔婚只能撤回「訂婚」,真成婚後不會被撤銷</li>
+            <li>· 強推可挑任何在世人物,跳過適齡未婚限制</li>
+            <li>· 擲一下、看看誰適合與翻檔案都會用目前角色池</li>
+          </ul>
+        </div>
+
+        <div class="match-card">
+          <h3 style="margin-top:0;">使用提示</h3>
+          <ul class="note-list">
+            <li>· 想新增人物或家族,請回主頁建立</li>
+            <li>· 案件結果即時同步存檔,可在主頁查看更新後的人物詳情</li>
+            <li>· 案卷紀錄存在記憶體中,重新整理後會清空</li>
+          </ul>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <!-- 翻檔案 -->
+  <div class="modal-backdrop" id="archiveModal">
+    <div class="modal-inner">
+      <div class="modal-header">
+        <h3>翻檔案</h3>
+        <button class="btn" id="closeArchiveBtn">關閉</button>
+      </div>
+      <div class="modal-tabs">
+        <button class="tab active" id="peopleTab">人物名冊</button>
+        <button class="tab" id="eventsTab">案卷紀錄</button>
+      </div>
+      <div class="modal-search">
+        <input id="archiveSearch" placeholder="搜尋姓名／家族／身分／備註／事件內容" />
+        <select id="archiveFilter"></select>
+      </div>
+      <div class="modal-body" id="archiveBody"></div>
+    </div>
+  </div>
+
+  <!-- 看看誰適合 -->
+  <div class="modal-backdrop" id="suggestionsModal">
+    <div class="modal-inner">
+      <div class="modal-header">
+        <h3 id="suggestionsTitle">議親建議</h3>
+        <button class="btn" id="closeSuggestionsBtn">關閉</button>
+      </div>
+      <div class="modal-body" id="suggestionsBody"></div>
+    </div>
+  </div>
+
+  <!-- DOM stub:供 family.js / 共用函式抓不到主頁元素時不爆 -->
+  <div style="display:none;">
+    <input id="personParentId" type="hidden" />
+    <button id="cancelChildModeBtn"></button>
+    <select id="personFamily"></select>
+  </div>
+
+  <!-- 載入順序:底層 → 領域 → 議親室本身 -->
+  <script src="js/constants.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/relations.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/time.js"></script>
+  <script src="js/family.js"></script>
+  <script src="js/match.js"></script>
+</body>
+</html>
