@@ -1184,6 +1184,24 @@ button, input, select, textarea {
   color: rgba(140, 100, 30, 0.95);
   border: 1px solid rgba(180, 140, 40, 0.3);
 }
+/* v6+:破局狀態 */
+.marriage-status-dissolved {
+  background: rgba(163, 73, 30, 0.12);
+  color: rgba(120, 50, 20, 0.95);
+  border: 1px solid rgba(163, 73, 30, 0.3);
+}
+/* v6+:曾配項目 */
+.ex-spouse-item {
+  opacity: 0.85;
+}
+.ex-spouse-item .person-link {
+  color: rgba(120, 90, 70, 0.95);
+  text-decoration: line-through wavy rgba(163, 73, 30, 0.4);
+}
+.ex-spouse-meta {
+  color: rgba(120, 50, 20, 0.85);
+  font-style: italic;
+}
 
 /* ---- 人物詳情:備註編輯 ---- */
 .btn-inline-edit {
