@@ -40,10 +40,14 @@ document.addEventListener("DOMContentLoaded", () => {
       origin: $("familyOrigin").value,
       regionId: $("familyRegion").value,
       territory: $("familyTerritory").value,
-      notes: $("familyNotes").value.trim()
+      notes: $("familyNotes").value.trim(),
+      standing: $("familyStanding").value
     };
     addFamily(data);
     $("familyForm").reset();
+    // 重置後重填預設值
+    const standingSel = $("familyStanding");
+    if (standingSel) standingSel.value = "尋常人家";
   });
 
   $("addOriginBtn").addEventListener("click", () => {

@@ -45,8 +45,79 @@ const matchState = {
   suggestionsTarget: "a",    // 看看誰適合:目前以 a 還是 b 為基準
   // 口頭議親不寫入 state,但需在本地記住階段,讓下一步按鈕能接續
   // key = pairKey(aId, bId), value = "已議親成功"(口頭議親後)
-  oralEngagements: {}
+  oralEngagements: {},
+  // v6+:本次議親意向(條件單),每次「看看誰適合」前由家主設定
+  // null = 尚未設定;非 null 時表示這一次的議親條件
+  intent: null,
+  // v6+:目前進行中的劇情案卷(null = 無)
+  narrative: null,
+  // v6+:破局類動作待決:暫存提出方,確認後執行 executeAction
+  // { actionKey, by: "A方"|"B方"|"雙方" }
+  dissolveDecision: null
 };
+
+// 議親條件單預設值
+function defaultMatchIntent() {
+  return {
+    // 婚事性質
+    kind: "正配",  // 正配 / 側室 / 續弦 / 入贅 / 政治聯姻
+    // 本次看重(最多 3 項)
+    values: [],
+    // 本次看重的細節參數(出身清單、職業清單)
+    valueOrigins: [],
+    valueOccupations: [],
+    // 育齡上限(僅當勾選 fertileAge 時生效)
+    fertileAgeLimit: 25,
+    // 本次忌諱(最多 2 項)
+    taboos: [],
+    // 忌諱的細節參數
+    tabooOrigin: "",
+    // 自由備註
+    note: ""
+  };
+}
+
+// 看重項目清單(用於勾選 UI)
+const INTENT_VALUE_OPTIONS = [
+  { key: "hasFamily",       label: "對方須有家族（不接受未歸宗族）" },
+  { key: "highStanding",    label: "對方門第相當或更高" },
+  { key: "thrivingFamily",  label: "對方家族人丁興旺" },
+  { key: "matchOrigin",     label: "對方出身相符（可指定）" },
+  { key: "sameRegion",      label: "對方在本區域" },
+  { key: "matchOccupation", label: "對方為指定職業" },
+  { key: "legitimateChild", label: "對方為嫡系子女" },
+  { key: "ageClose",        label: "對方年紀相當" },
+  { key: "fertileAge",      label: "對方在育齡（可指定上限）" },
+  { key: "noChildren",      label: "對方無子女" },
+  { key: "neverMarried",    label: "對方無婚配紀錄" },
+  { key: "parentsAlive",    label: "對方雙親健在" }
+];
+
+// 忌諱項目清單
+const INTENT_TABOO_OPTIONS = [
+  { key: "tabooOrigin",     label: "忌諱特定出身（可指定）" },
+  { key: "tabooFarRegion",  label: "忌諱遠地（不同區域）" },
+  { key: "tabooSameRegion", label: "忌諱本地（同區域，求外地姻親）" },
+  { key: "tabooMarried",    label: "忌諱已有家室者" },
+  { key: "tabooHasChildren",label: "忌諱已有子女者" },
+  { key: "tabooConcubineBorn", label: "忌諱庶出子女" },
+  { key: "tabooSidebranch", label: "忌諱旁系" },
+  { key: "tabooAgeGap",     label: "忌諱年齡懸殊（5 歲以上）" }
+];
+
+// 互斥規則:勾了其中一個,另一個自動關掉
+const INTENT_EXCLUSIVE_PAIRS = [
+  ["tabooFarRegion", "tabooSameRegion"]  // 遠地 vs 本地
+];
+
+// 婚事性質選項
+const INTENT_KIND_OPTIONS = [
+  { key: "正配",   label: "正配（嫡妻／嫡夫）", hint: "嚴格門第、年齡相當、無婚史優先" },
+  { key: "側室",   label: "側室／妾",           hint: "可接受對方門第較低，重點看子嗣可期" },
+  { key: "續弦",   label: "續弦／繼室",         hint: "接受對方有婚史，年齡差容忍度較大" },
+  { key: "入贅",   label: "入贅",               hint: "對方家族規模、長嗣狀況優先" },
+  { key: "政治聯姻", label: "政治聯姻",         hint: "看重對方家族規模、區域、是否盟友" }
+];
 
 function pairKey(x, y) { return [x, y].sort((a,b) => a - b).join("__"); }
 
@@ -760,20 +831,59 @@ function applySideEffects(out, a, b, inputs) {
     matchState.oralEngagements[pairKey(a.id, b.id)] = "已議親成功";
   }
 
-  // 駁回／悔婚:若有訂婚紀錄就移除;同時清掉本地口頭議親
+  // 駁回／悔婚:依當下階段決定處理方式
+  // - 已定親 / 婚期籌備:保留 spouseRelations 那筆,加 dissolved 標記寫入婚配紀錄
+  // - 其他(口頭議親或未進入流程):維持現有的 filter 邏輯,不寫入永久紀錄
   if (out.breakBetrothal) {
+    const decisionInfo = matchState.dissolveDecision || { by: "A方", reason: "" };
+    const currentStage = getStageOfPair(a, b);
+    const writeToRecord = (currentStage === "已定親" || currentStage === "婚期籌備");
+
     const rA = (a.spouseRelations || []).find(r => r.id === b.id);
     const rB = (b.spouseRelations || []).find(r => r.id === a.id);
-    if (rA && rA.type === "訂婚" && !rA.marryYear) {
+
+    if (writeToRecord && rA && rA.type === "訂婚" && !rA.marryYear) {
+      // 寫入永久婚配紀錄
+      rA.dissolved = true;
+      rA.dissolveYear = state.gameYear;
+      rA.dissolveStage = currentStage;
+      rA.dissolveAction = action;
+      rA.dissolvedBy = decisionInfo.by;
+      rA.dissolveReason = decisionInfo.reason || "";
+      touched = true;
+    } else if (rA && rA.type === "訂婚" && !rA.marryYear) {
+      // 一般情況(口頭議親等):移除紀錄
       a.spouseRelations = a.spouseRelations.filter(r => r.id !== b.id);
       a.spouseIds = (a.spouseIds || []).filter(id => id !== b.id);
       touched = true;
     }
-    if (rB && rB.type === "訂婚" && !rB.marryYear) {
+
+    if (writeToRecord && rB && rB.type === "訂婚" && !rB.marryYear) {
+      // 反向:從 B 角度看,提出方要對調
+      const reverseBy = decisionInfo.by === "A方" ? "B方" : (decisionInfo.by === "B方" ? "A方" : "雙方");
+      rB.dissolved = true;
+      rB.dissolveYear = state.gameYear;
+      rB.dissolveStage = currentStage;
+      rB.dissolveAction = action;
+      rB.dissolvedBy = reverseBy;
+      rB.dissolveReason = decisionInfo.reason || "";
+      touched = true;
+    } else if (rB && rB.type === "訂婚" && !rB.marryYear) {
       b.spouseRelations = b.spouseRelations.filter(r => r.id !== a.id);
       b.spouseIds = (b.spouseIds || []).filter(id => id !== a.id);
       touched = true;
     }
+
+    // spouseIds:已寫入永久紀錄者也要從 spouseIds 移除(因為已非現役配偶)
+    if (writeToRecord) {
+      if (rA && rA.dissolved) {
+        a.spouseIds = (a.spouseIds || []).filter(id => id !== b.id);
+      }
+      if (rB && rB.dissolved) {
+        b.spouseIds = (b.spouseIds || []).filter(id => id !== a.id);
+      }
+    }
+
     delete matchState.oralEngagements[pairKey(a.id, b.id)];
   }
 
@@ -852,7 +962,14 @@ function recordChronicleSafe(entry) {
 function suggestMatchesFor(target) {
   if (!target) return [];
   const oppositeGender = target.gender === "男" ? "女" : (target.gender === "女" ? "男" : null);
-  const pool = matchState.forcePick ? allLivingPeople() : eligibleForMatch();
+  const intent = matchState.intent || defaultMatchIntent();
+  let pool = matchState.forcePick ? allLivingPeople() : eligibleForMatch();
+
+  // v6+:婚事性質會影響池子(側室/續弦自動納入已婚對象)
+  if (!matchState.forcePick && (intent.kind === "側室" || intent.kind === "續弦")) {
+    pool = allLivingPeople();
+  }
+
   return pool
     .filter(c => c.id !== target.id)
     .filter(c => oppositeGender ? c.gender === oppositeGender : true)
@@ -866,16 +983,39 @@ function suggestMatchesFor(target) {
       if (ageDiff != null) {
         if (ageDiff <= 3) { reasons.push("年齡相當"); score += 3; }
         else if (ageDiff <= 6) { reasons.push("年齡尚可"); score += 1; }
-        else if (ageDiff > 10) { concerns.push(`年齡差 ${ageDiff} 歲偏大`); score -= 2; }
+        else if (ageDiff > 10) {
+          // v6+:續弦對年齡差容忍度大,減半扣分
+          const penalty = intent.kind === "續弦" ? -1 : -2;
+          concerns.push(`年齡差 ${ageDiff} 歲偏大`);
+          score += penalty;
+        }
       }
       if (cAge != null && cAge < 15) { concerns.push(`${c.name}年紀過小，需走暫緩觀察案`); score -= 3; }
       if (tAge != null && tAge < 15) concerns.push(`${target.name}年紀過小`);
 
       const cHas = (c.spouseIds || []).length > 0;
       const tHas = (target.spouseIds || []).length > 0;
-      if (cHas && !tHas) { concerns.push(`${c.name}已有婚配，只能納為側室／繼室`); score -= 1; }
+
+      // v6+:婚事性質影響「對方已婚」這條的判定
+      // 側室/續弦:對方已婚不扣分,反而是預期內;政治聯姻:中性
+      // 正配/入贅:照舊扣分
+      if (cHas && !tHas) {
+        if (intent.kind === "側室" || intent.kind === "續弦") {
+          // 不扣分,也不加分,純說明
+        } else {
+          concerns.push(`${c.name}已有婚配，只能納為側室／繼室`);
+          score -= 1;
+        }
+      }
       if (tHas && !cHas) reasons.push(`${target.name}已有婚配，${c.name}可作側妃／侍妾／續弦人選`);
-      if (cHas && tHas) { concerns.push("雙方都已有婚配"); score -= 3; }
+      if (cHas && tHas) {
+        if (intent.kind === "側室" || intent.kind === "續弦") {
+          score -= 1;
+        } else {
+          concerns.push("雙方都已有婚配");
+          score -= 3;
+        }
+      }
 
       // 同家族需查血緣
       if (c.familyId && target.familyId && c.familyId === target.familyId) {
@@ -900,11 +1040,325 @@ function suggestMatchesFor(target) {
       // 死者不行(理論上池子已過濾)
       if (c.deceased) { concerns.push("已逝"); score -= 99; }
 
+      // ============================================================
+      // v6+:本次意向計分(看重 +、忌諱 -)
+      // ============================================================
+      const intentResult = scoreByIntent(target, c, intent, tFam, cFam, tAge, cAge, ageDiff);
+      score += intentResult.delta;
+      intentResult.reasons.forEach(r => reasons.push(r));
+      intentResult.concerns.forEach(co => concerns.push(co));
+
       return { person: c, reasons, concerns, score };
     })
     .filter(item => item.score > -10)
     .sort((a, b) => b.score - a.score)
     .slice(0, 12);
+}
+
+// =============== v6+:意向計分 ===============
+// 回傳 { delta, reasons, concerns }
+function scoreByIntent(target, c, intent, tFam, cFam, tAge, cAge, ageDiff) {
+  let delta = 0;
+  const reasons = [];
+  const concerns = [];
+
+  // 標籤前綴,讓玩家分辨哪些是因為本次意向加減的
+  const VAL = "★合本次意向：";
+  const TAB = "✕犯本次忌諱：";
+
+  const cHas = (c.spouseIds || []).length > 0;
+  const cChildrenIds = (c.children || []).filter(id => {
+    const ch = findPerson(id);
+    return ch && !ch.deceased;
+  });
+  const cParents = [c.fatherId, c.motherId].filter(id => {
+    const p = findPerson(id);
+    return p && !p.deceased;
+  });
+
+  // 門第等級索引(數字越小越高)
+  function standingRank(fam) {
+    if (!fam || !fam.standing) return DEFAULT_STANDINGS.indexOf("尋常人家");
+    const idx = DEFAULT_STANDINGS.indexOf(fam.standing);
+    return idx >= 0 ? idx : DEFAULT_STANDINGS.indexOf("尋常人家");
+  }
+
+  // ====== 看重項目計分 ======
+  intent.values.forEach(key => {
+    switch (key) {
+      case "hasFamily":
+        if (c.familyId) {
+          delta += 8;
+          reasons.push(VAL + "對方有家族");
+        } else {
+          delta -= 12;
+          concerns.push(VAL + "對方未歸宗族");
+        }
+        break;
+
+      case "highStanding": {
+        if (!cFam) {
+          // 無家族,無從判斷;依本次政策視為失格
+          delta -= 5;
+          concerns.push(VAL + "對方無家族，門第無從評斷");
+          break;
+        }
+        const tRank = standingRank(tFam);
+        const cRank = standingRank(cFam);
+        // 對方門第 ≤ 我方(rank 數字越小門第越高)
+        if (cRank < tRank) {
+          delta += 15;
+          reasons.push(VAL + `對方門第（${cFam.standing}）高於本家`);
+        } else if (cRank === tRank) {
+          delta += 8;
+          reasons.push(VAL + `門當戶對（同為${cFam.standing}）`);
+        } else {
+          delta -= 8;
+          concerns.push(VAL + `對方門第（${cFam.standing}）低於本家`);
+        }
+        break;
+      }
+
+      case "thrivingFamily": {
+        if (!cFam) {
+          delta -= 3;
+          break;
+        }
+        const memberCount = state.persons.filter(
+          p => p.familyId === cFam.id && !p.deceased
+        ).length;
+        if (memberCount >= 8) {
+          delta += 12;
+          reasons.push(VAL + `對方家族人丁興旺（在世 ${memberCount} 人）`);
+        } else if (memberCount >= 5) {
+          delta += 6;
+          reasons.push(VAL + `對方家族人丁尚足（在世 ${memberCount} 人）`);
+        } else {
+          delta -= 4;
+          concerns.push(VAL + `對方家族人丁單薄（在世 ${memberCount} 人）`);
+        }
+        break;
+      }
+
+      case "matchOrigin": {
+        if (!intent.valueOrigins.length) break;  // 沒指定就不計
+        const cOrigin = cFam ? cFam.origin : "";
+        if (cOrigin && intent.valueOrigins.includes(cOrigin)) {
+          delta += 12;
+          reasons.push(VAL + `對方出身「${cOrigin}」符合所求`);
+        } else {
+          delta -= 5;
+          concerns.push(VAL + "對方出身不在所求之列");
+        }
+        break;
+      }
+
+      case "sameRegion": {
+        if (!tFam || !cFam) {
+          delta -= 2;
+          break;
+        }
+        if (tFam.regionId && tFam.regionId === cFam.regionId) {
+          delta += 10;
+          reasons.push(VAL + "對方在本區域");
+        } else {
+          delta -= 5;
+          concerns.push(VAL + "對方不在本區域");
+        }
+        break;
+      }
+
+      case "matchOccupation": {
+        if (!intent.valueOccupations.length) break;
+        const occ = c.occupation || "";
+        if (occ && intent.valueOccupations.includes(occ)) {
+          delta += 12;
+          reasons.push(VAL + `對方為「${occ}」`);
+        } else {
+          delta -= 4;
+          concerns.push(VAL + "對方職業不在所求之列");
+        }
+        break;
+      }
+
+      case "legitimateChild":
+        if (c.role === "嫡支子女") {
+          delta += 10;
+          reasons.push(VAL + "對方為嫡支子女");
+        } else if (c.role === "庶出子女") {
+          delta -= 6;
+          concerns.push(VAL + "對方為庶出，非所求嫡系");
+        } else if (c.role === "旁系宗親") {
+          delta -= 4;
+          concerns.push(VAL + "對方為旁系，非所求嫡系");
+        } else {
+          // 身分未明 / 家主等
+          delta -= 1;
+        }
+        break;
+
+      case "ageClose": {
+        // 強化現有的年齡相當判斷
+        if (ageDiff == null) break;
+        if (ageDiff <= 3) {
+          delta += 8;
+          reasons.push(VAL + "年紀相當（強化）");
+        } else if (ageDiff <= 6) {
+          delta += 2;
+        } else {
+          delta -= 6;
+          concerns.push(VAL + `年齡差 ${ageDiff} 歲，未達相當`);
+        }
+        break;
+      }
+
+      case "fertileAge": {
+        if (cAge == null) {
+          delta -= 2;
+          break;
+        }
+        const limit = intent.fertileAgeLimit || 25;
+        if (cAge <= limit) {
+          delta += 10;
+          reasons.push(VAL + `對方 ${cAge} 歲，在育齡之內`);
+        } else {
+          delta -= 6;
+          concerns.push(VAL + `對方 ${cAge} 歲，已逾育齡（${limit}）`);
+        }
+        break;
+      }
+
+      case "noChildren":
+        if (cChildrenIds.length === 0) {
+          delta += 8;
+          reasons.push(VAL + "對方尚無子女");
+        } else {
+          delta -= 5;
+          concerns.push(VAL + `對方已有 ${cChildrenIds.length} 名子女`);
+        }
+        break;
+
+      case "neverMarried":
+        if (!cHas) {
+          delta += 10;
+          reasons.push(VAL + "對方無婚配紀錄");
+        } else {
+          delta -= 8;
+          concerns.push(VAL + "對方曾有婚配");
+        }
+        break;
+
+      case "parentsAlive": {
+        if (cParents.length === 2) {
+          delta += 8;
+          reasons.push(VAL + "對方雙親健在");
+        } else if (cParents.length === 1) {
+          delta += 2;
+        } else {
+          delta -= 3;
+          concerns.push(VAL + "對方雙親皆已不在");
+        }
+        break;
+      }
+    }
+  });
+
+  // ====== 忌諱項目計分 ======
+  intent.taboos.forEach(key => {
+    switch (key) {
+      case "tabooOrigin": {
+        if (!intent.tabooOrigin) break;
+        const cOrigin = cFam ? cFam.origin : "";
+        if (cOrigin === intent.tabooOrigin) {
+          delta -= 15;
+          concerns.push(TAB + `對方出身「${cOrigin}」`);
+        }
+        break;
+      }
+
+      case "tabooFarRegion": {
+        if (!tFam || !cFam) break;
+        if (tFam.regionId && cFam.regionId && tFam.regionId !== cFam.regionId) {
+          delta -= 10;
+          concerns.push(TAB + "對方在遠地（不同區域）");
+        }
+        break;
+      }
+
+      case "tabooSameRegion": {
+        if (!tFam || !cFam) break;
+        if (tFam.regionId && tFam.regionId === cFam.regionId) {
+          delta -= 10;
+          concerns.push(TAB + "對方在本地（求外地姻親）");
+        }
+        break;
+      }
+
+      case "tabooMarried":
+        if (cHas) {
+          delta -= 15;
+          concerns.push(TAB + "對方已有家室");
+        }
+        break;
+
+      case "tabooHasChildren":
+        if (cChildrenIds.length > 0) {
+          delta -= 12;
+          concerns.push(TAB + `對方已有 ${cChildrenIds.length} 名子女`);
+        }
+        break;
+
+      case "tabooConcubineBorn":
+        if (c.role === "庶出子女") {
+          delta -= 15;
+          concerns.push(TAB + "對方為庶出子女");
+        }
+        break;
+
+      case "tabooSidebranch":
+        if (c.role === "旁系宗親") {
+          delta -= 12;
+          concerns.push(TAB + "對方為旁系宗親");
+        }
+        break;
+
+      case "tabooAgeGap":
+        if (ageDiff != null && ageDiff > 5) {
+          delta -= 10;
+          concerns.push(TAB + `年齡懸殊 ${ageDiff} 歲`);
+        }
+        break;
+    }
+  });
+
+  // ====== 婚事性質額外修正 ======
+  // 政治聯姻:大幅放大「對方家族人丁興旺」的價值,且額外給有家族的對象加分
+  if (intent.kind === "政治聯姻") {
+    if (cFam) {
+      delta += 5;
+      // 不重複加入 reasons,避免雜訊
+    } else {
+      delta -= 10;
+      concerns.push("★政治聯姻無從締結（對方無家族）");
+    }
+  }
+  // 入贅:對方家族規模、長嗣狀況優先(尤其有家族 + 嫡系)
+  if (intent.kind === "入贅") {
+    if (cFam && c.role === "嫡支子女") {
+      delta += 6;
+    }
+  }
+  // 側室:對方門第低不視為扣分,反之太高反成阻礙
+  if (intent.kind === "側室" && cFam && tFam) {
+    const tRank = standingRank(tFam);
+    const cRank = standingRank(cFam);
+    if (cRank < tRank - 1) {
+      delta -= 5;
+      concerns.push("側室人選門第過高，難以名分自處");
+    }
+  }
+
+  return { delta, reasons, concerns };
 }
 
 // =============== 人物資訊文字 ===============
@@ -1026,6 +1480,59 @@ function renderCase() {
   const b = getMB();
   _$("caseTitle").textContent = a && b ? `${a.name} × ${b.name}` : "未開案";
   _$("caseSummary").textContent = buildSummary(a, b);
+  renderPairScoreBox(a, b);
+}
+
+// v6+:合適度條
+function renderPairScoreBox(a, b) {
+  const box = _$("pairScoreBox");
+  if (!box) return;
+  if (!a || !b) {
+    box.innerHTML = "";
+    return;
+  }
+  const pd = getPairData(a.id, b.id);
+  if (!pd) {
+    box.innerHTML = `<div class="pair-score-empty">尚未開始議親推進，合適度暫未紀錄。</div>`;
+    return;
+  }
+  const score = pd.score;
+  let barColor = "#a3491e";
+  if (score >= 70) barColor = "#5b7a3a";
+  else if (score >= 40) barColor = "#a08544";
+
+  // 過往破局紀錄
+  const breakWarn = (pd.lastBreak && pd.history.length === 0) ? `
+    <div class="pair-score-break-warn">
+      此對人前次因「${pd.lastBreak}」破局，重議基底已下降 ${pd.penalty} 分。
+    </div>
+  ` : "";
+
+  const historyHtml = pd.history.length ? `
+    <details class="pair-score-details">
+      <summary>本案進展紀錄（共 ${pd.history.length} 段）</summary>
+      ${pd.history.map(h => `
+        <div class="pair-score-hist-row">
+          <div><strong>【${h.stage}】${h.eventTitle}</strong> <span class="nar-delta ${h.delta >= 0 ? "pos" : "neg"}">${h.delta >= 0 ? "+" : ""}${h.delta}</span></div>
+          <div class="pair-score-hist-choice">→ ${h.choiceLabel}</div>
+          <div class="pair-score-hist-conseq">${h.consequence}</div>
+        </div>
+      `).join("")}
+    </details>
+  ` : "";
+
+  box.innerHTML = `
+    <div class="pair-score-block">
+      <div class="pair-score-label">合適度</div>
+      <div class="pair-score-row">
+        <div class="pair-score-bar"><div class="pair-score-fill" style="width:${score}%;background:${barColor};"></div></div>
+        <div class="pair-score-num" style="color:${barColor};">${score}</div>
+      </div>
+      <div class="pair-score-trail">初始 ${pd.baseScore}　已歷 ${pd.stagesDone.length} 段</div>
+      ${breakWarn}
+      ${historyHtml}
+    </div>
+  `;
 }
 
 function renderActions() {
@@ -1169,11 +1676,11 @@ function renderChapters() {
     return;
   }
   _$("chapters").innerHTML = latest.map(ch => `
-    <div class="chapter ${ch.kind === "event" ? "event" : ""}">
+    <div class="chapter ${ch.kind === "event" ? "event" : ""}${ch.hasNarrative ? " narrative" : ""}">
       <div class="chapter-title">${ch.title}</div>
       <div class="small-muted">處理:${ch.actionLabel} ・ 星曆 ${ch.year} 年${ch.pair ? ` ・ ${ch.pair}` : ""}</div>
-      <div><strong>當下:</strong>${ch.immediate}</div>
-      <div><strong>後續:</strong>${ch.next}</div>
+      <div><strong>當下:</strong><pre class="chapter-pre">${ch.immediate}</pre></div>
+      <div><strong>後續:</strong><pre class="chapter-pre">${ch.next}</pre></div>
       <div><strong>提示:</strong>${ch.hint}</div>
       ${ch.reactions && ch.reactions.length ? `
         <div class="reaction-box">
@@ -1198,7 +1705,7 @@ function renderAll() {
 function handleActionClick(actionKey) {
   const fields = getRequiredFields(actionKey);
   if (!fields.length) {
-    executeAction(actionKey);
+    executeActionWithNarrative(actionKey);
   } else {
     matchState.pendingAction = actionKey;
     renderActions();
@@ -1207,7 +1714,7 @@ function handleActionClick(actionKey) {
 
 // 暴露為全域,讓 onclick 抓得到
 function matchConfirm() {
-  if (matchState.pendingAction) executeAction(matchState.pendingAction);
+  if (matchState.pendingAction) executeActionWithNarrative(matchState.pendingAction);
 }
 function matchCancel() {
   matchState.pendingAction = null;
@@ -1228,20 +1735,52 @@ function executeAction(action) {
     applySideEffects(out, a, b, inputs);
 
     const reactions = getThirdPartyReactions(action, a, b);
+
+    // v6+:若此動作前剛跑過劇情,把劇情段落寫進 chapter
+    const pre = matchState._narrativePrefix;
+    let immediate = out.immediate;
+    let extraNext = "";
+    if (pre) {
+      immediate = `【${pre.stage}・${pre.eventTitle}】\n你的選擇：${pre.choiceLabel}（${pre.delta >= 0 ? "+" : ""}${pre.delta}）\n${pre.consequence}\n\n${out.immediate}`;
+      extraNext = `\n（合適度現為 ${pre.score}）`;
+    }
+
+    // v6+:負向動作的合適度清算
+    const negApplied = applyNegativeAction(action, a.id, b.id);
+    if (negApplied) {
+      if (negApplied.type === "reset") {
+        extraNext += `\n（因「${negApplied.label}」，此對人合適度與進展紀錄已清除；日後重議基底將下降 ${negApplied.penalty} 分。）`;
+      } else {
+        const pd = getPairData(a.id, b.id);
+        const curScore = pd ? pd.score : 0;
+        extraNext += `\n（因「${negApplied.label}」扣 ${negApplied.penalty} 分，合適度現為 ${curScore}。）`;
+      }
+    }
+
+    // v6+:破局提出方資訊(若有)
+    if (matchState.dissolveDecision) {
+      const info = matchState.dissolveDecision;
+      const byLabel = info.by === "雙方" ? "雙方協議" : `由${info.by === "A方" ? a.name : b.name}（${info.by}）提出`;
+      extraNext += `\n（${byLabel}${info.reason ? "，緣由：" + info.reason : ""}）`;
+    }
+
     addChapter({
       title: out.title,
       actionLabel: actions.find(x => x.key === action)?.label || action,
-      immediate: out.immediate,
-      next: out.next,
+      immediate,
+      next: out.next + extraNext,
       hint: out.hint,
       reactions,
       kind: "action",
+      hasNarrative: !!pre,  // v6+:這筆 chapter 是否包含劇情段落
       year: state.gameYear,
       aId: a.id,
       bId: b.id,
       pair: `${a.name} × ${b.name}`,
     });
     matchState.pendingAction = null;
+    matchState.dissolveDecision = null;  // v6+:用完即清
+    saveState();  // v6+:確保 pairScores 與 chapters 一併存檔
     renderAll();
   } catch (err) {
     console.error("執行動作時出錯：", err);
@@ -1341,16 +1880,17 @@ function renderArchive() {
     });
   } else {
     // 事件頁:列出議親室持久化的案卷
-    filter.innerHTML = ["全部", "動作", "事件"].map(v => `<option value="${v}" ${v === matchState.archiveFilter ? "selected" : ""}>${v}</option>`).join("");
+    filter.innerHTML = ["全部", "動作", "事件", "含劇情"].map(v => `<option value="${v}" ${v === matchState.archiveFilter ? "selected" : ""}>${v}</option>`).join("");
     const chs = getChapters();
     const filtered = chs.filter(ch => {
       if (matchState.archiveFilter === "動作" && ch.kind === "event") return false;
       if (matchState.archiveFilter === "事件" && ch.kind !== "event") return false;
+      if (matchState.archiveFilter === "含劇情" && !ch.hasNarrative) return false;
       if (!search) return true;
       return `${ch.title} ${ch.immediate} ${ch.actionLabel} ${ch.pair || ""}`.toLowerCase().includes(search);
     });
     body.innerHTML = filtered.length ? filtered.map(ch => `
-      <div class="archive-item ${ch.kind === "event" ? "event-archive" : ""}">
+      <div class="archive-item ${ch.kind === "event" ? "event-archive" : ""}${ch.hasNarrative ? " narrative-archive" : ""}">
         <div class="archive-top">
           <div>
             <div class="chapter-title">${ch.title}</div>
@@ -1358,8 +1898,8 @@ function renderArchive() {
           </div>
           ${(ch.aId != null && ch.bId != null) ? `<button class="btn" data-reopen-a="${ch.aId}" data-reopen-b="${ch.bId}" style="font-size:12px;padding:7px 10px;white-space:nowrap;">重開此案</button>` : ""}
         </div>
-        <div style="margin-top:4px;">${ch.immediate}</div>
-        ${ch.next ? `<div class="small-muted" style="margin-top:4px;">後續:${ch.next}</div>` : ""}
+        <div style="margin-top:4px;"><pre class="chapter-pre">${ch.immediate}</pre></div>
+        ${ch.next ? `<div class="small-muted" style="margin-top:4px;">後續:<pre class="chapter-pre">${ch.next}</pre></div>` : ""}
       </div>
     `).join("") : `<p class="empty">沒有符合的紀錄</p>`;
     document.querySelectorAll("[data-reopen-a]").forEach(btn => {
@@ -1376,8 +1916,267 @@ function renderArchive() {
 
 function openSuggestions(targetWhich) {
   matchState.suggestionsTarget = targetWhich || "a";
+  // v6+:先開條件單,設定完才看推薦
+  openIntentDialog();
+}
+
+// 跳過條件單,直接顯示推薦(供條件單「採用本次條件」按鈕呼叫)
+function showSuggestionsModal() {
   _$("suggestionsModal").classList.add("active");
   renderSuggestions();
+}
+
+// =============== 議親條件單(本次議親意向) ===============
+function openIntentDialog() {
+  const target = matchState.suggestionsTarget === "b" ? getMB() : getMA();
+  if (!target) {
+    alert("請先選定要為其議親的對象。");
+    return;
+  }
+  // 若已有 intent 沿用,否則用預設
+  if (!matchState.intent) matchState.intent = defaultMatchIntent();
+  _$("intentModal").classList.add("active");
+  renderIntentDialog();
+}
+
+function closeIntentDialog() {
+  _$("intentModal").classList.remove("active");
+}
+
+function renderIntentDialog() {
+  const target = matchState.suggestionsTarget === "b" ? getMB() : getMA();
+  const intent = matchState.intent;
+  _$("intentTitle").textContent = `為「${target.name}」議親 — 本次條件`;
+
+  // 婚事性質
+  const kindHtml = INTENT_KIND_OPTIONS.map(o => `
+    <label class="intent-kind${intent.kind === o.key ? " selected" : ""}">
+      <input type="radio" name="intentKind" value="${o.key}"${intent.kind === o.key ? " checked" : ""} />
+      <div>
+        <div class="intent-kind-title">${o.label}</div>
+        <div class="intent-kind-hint">${o.hint}</div>
+      </div>
+    </label>
+  `).join("");
+
+  // 看重(最多 3 項)
+  const valueHtml = INTENT_VALUE_OPTIONS.map(o => {
+    const checked = intent.values.includes(o.key);
+    return `
+      <label class="intent-check">
+        <input type="checkbox" data-value-key="${o.key}"${checked ? " checked" : ""} />
+        <span>${o.label}</span>
+      </label>
+    `;
+  }).join("");
+
+  // 出身選擇(看重對方出身)
+  const originSelHtml = state.originOptions.map(o =>
+    `<label class="intent-tag${intent.valueOrigins.includes(o) ? " selected" : ""}" data-origin="${o}">${o}</label>`
+  ).join("");
+
+  // 職業選擇(看重對方職業)
+  const occSelHtml = state.occOptions.map(o =>
+    `<label class="intent-tag${intent.valueOccupations.includes(o) ? " selected" : ""}" data-occ="${o}">${o}</label>`
+  ).join("");
+
+  // 育齡上限下拉
+  const fertileAgeOptions = [22, 25, 28, 30, 35];
+  const fertileAgeHtml = `
+    <select id="intentFertileAgeSel">
+      ${fertileAgeOptions.map(a =>
+        `<option value="${a}"${intent.fertileAgeLimit === a ? " selected" : ""}>${a} 歲以下</option>`
+      ).join("")}
+    </select>
+  `;
+
+  // 忌諱(最多 2 項)
+  const tabooHtml = INTENT_TABOO_OPTIONS.map(o => {
+    const checked = intent.taboos.includes(o.key);
+    return `
+      <label class="intent-check">
+        <input type="checkbox" data-taboo-key="${o.key}"${checked ? " checked" : ""} />
+        <span>${o.label}</span>
+      </label>
+    `;
+  }).join("");
+
+  // 忌諱出身的單選下拉
+  const tabooOriginHtml = `
+    <select id="intentTabooOriginSel">
+      <option value="">— 請選擇忌諱的出身 —</option>
+      ${state.originOptions.map(o =>
+        `<option value="${o}"${intent.tabooOrigin === o ? " selected" : ""}>${o}</option>`
+      ).join("")}
+    </select>
+  `;
+
+  _$("intentBody").innerHTML = `
+    <div class="intent-section">
+      <div class="intent-section-title">一、婚事性質</div>
+      <div class="intent-kind-list">${kindHtml}</div>
+    </div>
+
+    <div class="intent-section">
+      <div class="intent-section-title">二、本次看重（最多 3 項）<span class="intent-count" id="intentValueCount">${intent.values.length} / 3</span></div>
+      <div class="intent-check-list">${valueHtml}</div>
+
+      <div class="intent-subblock${intent.values.includes("matchOrigin") ? "" : " disabled"}" id="intentOriginBlock">
+        <div class="intent-sub-title">指定看重的出身（可複選）</div>
+        <div class="intent-tag-list">${originSelHtml}</div>
+      </div>
+
+      <div class="intent-subblock${intent.values.includes("matchOccupation") ? "" : " disabled"}" id="intentOccBlock">
+        <div class="intent-sub-title">指定看重的職業（可複選）</div>
+        <div class="intent-tag-list">${occSelHtml}</div>
+      </div>
+
+      <div class="intent-subblock${intent.values.includes("fertileAge") ? "" : " disabled"}" id="intentFertileAgeBlock">
+        <div class="intent-sub-title">育齡上限</div>
+        ${fertileAgeHtml}
+      </div>
+    </div>
+
+    <div class="intent-section">
+      <div class="intent-section-title">三、本次忌諱（最多 2 項）<span class="intent-count" id="intentTabooCount">${intent.taboos.length} / 2</span></div>
+      <div class="intent-check-list">${tabooHtml}</div>
+
+      <div class="intent-subblock${intent.taboos.includes("tabooOrigin") ? "" : " disabled"}" id="intentTabooOriginBlock">
+        <div class="intent-sub-title">指定忌諱的出身</div>
+        ${tabooOriginHtml}
+      </div>
+    </div>
+
+    <div class="intent-section">
+      <div class="intent-section-title">四、備註（選填）</div>
+      <textarea id="intentNote" rows="2" placeholder="例：老夫人指明要找江南書香之家。">${intent.note || ""}</textarea>
+    </div>
+
+    <div class="intent-actions">
+      <button class="btn" id="intentResetBtn">重置條件</button>
+      <button class="btn btn-primary" id="intentApplyBtn">採用本次條件 → 看推薦</button>
+    </div>
+  `;
+
+  bindIntentDialogEvents();
+}
+
+function bindIntentDialogEvents() {
+  const intent = matchState.intent;
+
+  // 婚事性質
+  document.querySelectorAll('input[name="intentKind"]').forEach(r => {
+    r.addEventListener("change", e => {
+      intent.kind = e.target.value;
+      renderIntentDialog();
+    });
+  });
+
+  // 看重勾選
+  document.querySelectorAll('input[data-value-key]').forEach(c => {
+    c.addEventListener("change", e => {
+      const key = e.target.dataset.valueKey;
+      if (e.target.checked) {
+        if (intent.values.length >= 3) {
+          e.target.checked = false;
+          alert("本次看重的條件至多 3 項。");
+          return;
+        }
+        if (!intent.values.includes(key)) intent.values.push(key);
+      } else {
+        intent.values = intent.values.filter(k => k !== key);
+      }
+      renderIntentDialog();
+    });
+  });
+
+  // 出身標籤
+  document.querySelectorAll('.intent-tag[data-origin]').forEach(t => {
+    t.addEventListener("click", () => {
+      if (!intent.values.includes("matchOrigin")) return;
+      const o = t.dataset.origin;
+      if (intent.valueOrigins.includes(o)) {
+        intent.valueOrigins = intent.valueOrigins.filter(x => x !== o);
+      } else {
+        intent.valueOrigins.push(o);
+      }
+      renderIntentDialog();
+    });
+  });
+
+  // 職業標籤
+  document.querySelectorAll('.intent-tag[data-occ]').forEach(t => {
+    t.addEventListener("click", () => {
+      if (!intent.values.includes("matchOccupation")) return;
+      const o = t.dataset.occ;
+      if (intent.valueOccupations.includes(o)) {
+        intent.valueOccupations = intent.valueOccupations.filter(x => x !== o);
+      } else {
+        intent.valueOccupations.push(o);
+      }
+      renderIntentDialog();
+    });
+  });
+
+  // 忌諱勾選
+  document.querySelectorAll('input[data-taboo-key]').forEach(c => {
+    c.addEventListener("change", e => {
+      const key = e.target.dataset.tabooKey;
+      if (e.target.checked) {
+        // 互斥檢查:若勾的這項與已勾的某項互斥,先把互斥那項拿掉
+        const pair = INTENT_EXCLUSIVE_PAIRS.find(p => p.includes(key));
+        if (pair) {
+          const other = pair.find(k => k !== key);
+          if (intent.taboos.includes(other)) {
+            intent.taboos = intent.taboos.filter(k => k !== other);
+          }
+        }
+        if (intent.taboos.length >= 2) {
+          e.target.checked = false;
+          alert("本次忌諱的條件至多 2 項。");
+          return;
+        }
+        if (!intent.taboos.includes(key)) intent.taboos.push(key);
+      } else {
+        intent.taboos = intent.taboos.filter(k => k !== key);
+      }
+      renderIntentDialog();
+    });
+  });
+
+  // 忌諱出身下拉
+  const tabSel = _$("intentTabooOriginSel");
+  if (tabSel) {
+    tabSel.addEventListener("change", e => {
+      intent.tabooOrigin = e.target.value;
+    });
+  }
+
+  // v6+:育齡上限下拉
+  const fertSel = _$("intentFertileAgeSel");
+  if (fertSel) {
+    fertSel.addEventListener("change", e => {
+      intent.fertileAgeLimit = Number(e.target.value) || 25;
+    });
+  }
+
+  // 備註
+  const noteEl = _$("intentNote");
+  if (noteEl) {
+    noteEl.addEventListener("input", e => { intent.note = e.target.value; });
+  }
+
+  // 重置
+  _$("intentResetBtn").addEventListener("click", () => {
+    matchState.intent = defaultMatchIntent();
+    renderIntentDialog();
+  });
+
+  // 採用條件 → 看推薦
+  _$("intentApplyBtn").addEventListener("click", () => {
+    closeIntentDialog();
+    showSuggestionsModal();
+  });
 }
 
 function renderSuggestions() {
@@ -1388,8 +2187,52 @@ function renderSuggestions() {
     return;
   }
   _$("suggestionsTitle").textContent = `給 ${target.name} 的議親建議`;
+
+  // v6+:本次條件摘要
+  const intent = matchState.intent || defaultMatchIntent();
+  const valueLabels = intent.values.map(k => {
+    const opt = INTENT_VALUE_OPTIONS.find(o => o.key === k);
+    if (!opt) return k;
+    if (k === "matchOrigin" && intent.valueOrigins.length)
+      return `出身：${intent.valueOrigins.join("、")}`;
+    if (k === "matchOccupation" && intent.valueOccupations.length)
+      return `職業：${intent.valueOccupations.join("、")}`;
+    if (k === "fertileAge")
+      return `育齡：${intent.fertileAgeLimit}歲以下`;
+    return opt.label.replace(/（.*$/, "");
+  });
+  const tabooLabels = intent.taboos.map(k => {
+    const opt = INTENT_TABOO_OPTIONS.find(o => o.key === k);
+    if (!opt) return k;
+    if (k === "tabooOrigin" && intent.tabooOrigin)
+      return `忌諱出身：${intent.tabooOrigin}`;
+    return opt.label.replace(/（.*$/, "");
+  });
+
+  const summaryHtml = `
+    <div class="intent-summary">
+      <div class="intent-summary-row">
+        <span class="intent-summary-label">婚事性質</span>
+        <span class="intent-summary-value">${intent.kind}</span>
+      </div>
+      <div class="intent-summary-row">
+        <span class="intent-summary-label">本次看重</span>
+        <span class="intent-summary-value">${valueLabels.length ? valueLabels.join("｜") : "—"}</span>
+      </div>
+      <div class="intent-summary-row">
+        <span class="intent-summary-label">本次忌諱</span>
+        <span class="intent-summary-value">${tabooLabels.length ? tabooLabels.join("｜") : "—"}</span>
+      </div>
+      ${intent.note ? `<div class="intent-summary-row"><span class="intent-summary-label">備註</span><span class="intent-summary-value">${intent.note}</span></div>` : ""}
+      <div class="intent-summary-actions">
+        <button class="btn btn-small" id="reopenIntentBtn">修改本次條件</button>
+        <span class="intent-summary-hint">★合本次意向 = 加分；✕犯本次忌諱 = 扣分</span>
+      </div>
+    </div>
+  `;
+
   const suggestions = suggestMatchesFor(target);
-  _$("suggestionsBody").innerHTML = suggestions.length ? suggestions.map(({ person, reasons, concerns, score }) => `
+  const listHtml = suggestions.length ? suggestions.map(({ person, reasons, concerns, score }) => `
     <div class="archive-item">
       <div class="archive-top">
         <div>
@@ -1403,6 +2246,18 @@ function renderSuggestions() {
       ${concerns.length ? `<div class="reason"><span class="concern-label">阻礙:</span>${concerns.join("、")}</div>` : ""}
     </div>
   `).join("") : `<p class="empty">沒有合適對象。試試切換「強推」拿任意人物。</p>`;
+
+  _$("suggestionsBody").innerHTML = summaryHtml + listHtml;
+
+  // 修改條件按鈕:關閉推薦清單,回到條件單
+  const reopenBtn = _$("reopenIntentBtn");
+  if (reopenBtn) {
+    reopenBtn.addEventListener("click", () => {
+      _$("suggestionsModal").classList.remove("active");
+      openIntentDialog();
+    });
+  }
+
   document.querySelectorAll("[data-pick]").forEach(btn => {
     btn.addEventListener("click", () => {
       const pid = Number(btn.dataset.pick);
@@ -1412,6 +2267,708 @@ function renderSuggestions() {
       renderAll();
     });
   });
+}
+
+// ============================================================
+// v6+:劇情案卷系統(階段事件、合適度條、選擇分支)
+// ============================================================
+
+// 階段定義
+const NARRATIVE_STAGES = [
+  { key: "提親", label: "一・提親", kicker: "媒人初訪" },
+  { key: "議親", label: "二・議親", kicker: "條件商議" },
+  { key: "定親", label: "三・定親", kicker: "正式約定" },
+  { key: "婚前", label: "四・婚前", kicker: "變數浮現" },
+  { key: "成婚", label: "五・成婚", kicker: "禮成之日" }
+];
+
+// 結局判定門檻
+const NARRATIVE_OUTCOMES = [
+  { min: 70, key: "圓滿成親", label: "圓滿成親", desc: "兩家盡興，本人投契，自此結為秦晉之好。" },
+  { min: 40, key: "勉強成親", label: "勉強成親", desc: "禮數雖成，內裡卻多有勉強。日後相處，端看造化。" },
+  { min: -999, key: "破局", label: "親事破局", desc: "終究議不下去。兩家心照不宣地讓此事不了了之。" }
+];
+
+// 事件庫
+// delta: 固定加減分
+// dynamicDelta(ctx): 條件式加減,回傳 { delta, consequence } 覆寫
+// kinds: 此事件適用的婚事性質(空陣列 = 全適用)
+const NARRATIVE_EVENTS = [
+  // ----- 一・提親 -----
+  {
+    id: "first-visit",
+    stage: "提親",
+    title: "初次拜會",
+    body: (a, b) => {
+      const aFam = a.familyId ? getFamilyNameById(a.familyId) : "本家";
+      const bFam = b.familyId ? getFamilyNameById(b.familyId) : `${b.name}府上`;
+      return `${aFam}遣媒人攜禮拜會${bFam}。茶過三巡，雙方家長尚未談到婚事正題，氣氛微有些尷尬。媒人遞了個眼色：話該怎麼接，全看本家當主的意思。`;
+    },
+    kinds: [],
+    choices: [
+      {
+        label: "由家主親自出面，直言來意，請對方斟酌",
+        delta: 4,
+        consequence: "對方覺得本家誠懇，但少了三分婉轉，後話留得不夠。"
+      },
+      {
+        label: "推由長輩出面，閒話家常中暗示婚意",
+        delta: 2,
+        consequence: "合於禮數，雙方都有迴旋餘地。"
+      },
+      {
+        label: "邀對方家中子女出來見禮，由人物自身致意",
+        dynamicDelta: (ctx) => {
+          if (ctx.ageDiff != null && ctx.ageDiff <= 3) {
+            return { delta: 6, consequence: "兩位當事人年齒相當，自然投契，本家此舉反成佳話。" };
+          }
+          return { delta: -2, consequence: "兩位當事人本不熟悉，當眾相見反而尷尬，徒增疏離。" };
+        }
+      }
+    ]
+  },
+
+  // ----- 二・議親 -----
+  {
+    id: "betrothal-gift",
+    stage: "議親",
+    title: "聘禮商議",
+    body: () => "議親漸入正題。聘禮數目須兩家私下議定。本家規格與對方家境之間，總要拿捏個分寸。",
+    kinds: [],
+    choices: [
+      {
+        label: "依本家門第規格從厚，彰顯重視",
+        dynamicDelta: (ctx) => {
+          // 若對方門第低於本家,從厚反成壓力
+          if (ctx.standingDiff > 1) {
+            return { delta: -3, consequence: "誠意可見，但門第差大時反成炫耀，對方暗自不安。" };
+          }
+          return { delta: 5, consequence: "本家規格俱備，對方家中老人讚一聲體面。" };
+        }
+      },
+      {
+        label: "依對方家境略作斟酌，以對等為要",
+        delta: 3,
+        consequence: "對方感念體貼，但本家族中或有人覺得失了體面。"
+      },
+      {
+        label: "委由媒人居中傳話，雙方各退一步",
+        delta: 1,
+        consequence: "穩妥但平淡，雙方都不會特別記住這場議親。"
+      }
+    ]
+  },
+
+  // ----- 三・定親 -----
+  {
+    id: "bazi-reading",
+    stage: "定親",
+    title: "八字相合與否",
+    body: () => "命書送到，先生捻著鬚搖頭又點頭。八字之說，向來信者恆信，但定親前這一關不能省。本家對「相合」「相沖」的態度，往往看的是當主的氣度。",
+    // 側室、續弦案卷會跳過
+    kinds: ["正配", "入贅", "政治聯姻"],
+    choices: [
+      {
+        label: "命書既不利，重金請另一位名家複看",
+        dynamicDelta: (ctx) => {
+          // 60% 機率再判相合
+          if (ctx.roll < 0.6) {
+            return { delta: 3, consequence: "另一位先生果然斷為大吉，破局轉合，本家私下鬆了口氣。" };
+          }
+          return { delta: -2, consequence: "兩位先生皆判相沖，本家迷信之名傳出，反傷顏面。" };
+        }
+      },
+      {
+        label: "八字不過皮毛，本家自有家風護持",
+        dynamicDelta: (ctx) => {
+          // 若意向勾選「對方雙親健在」: 額外 +2
+          const bonus = (ctx.intent.values || []).includes("parentsAlive") ? 2 : 0;
+          return {
+            delta: 5 + bonus,
+            consequence: bonus
+              ? "本家剛斷有度，對方雙親在堂、見此氣度亦深以為然。"
+              : "本家剛斷有度，對方亦敬佩這份篤定。"
+          };
+        }
+      },
+      {
+        label: "既有不利之說，不如先擱置數月再議",
+        delta: -4,
+        consequence: "耽擱本身就是一種拒絕，對方家中漸生不耐。"
+      }
+    ]
+  },
+
+  // ----- 四・婚前 -----
+  {
+    id: "old-affair",
+    stage: "婚前",
+    title: "舊事翻出",
+    body: (a, b) => `將近婚期時，一封匿名書信送到本家。信中提及${b.name}年少時曾與某人有過婚約傳聞，雖未成事，知情者卻不在少數。`,
+    kinds: [],
+    choices: [
+      {
+        label: "派人查明此事，當面對質",
+        dynamicDelta: (ctx) => {
+          // 50% 是真
+          if (ctx.roll < 0.5) {
+            return { delta: -2, consequence: "果有其事，對方坦承。雙方信任打了折扣，但事既明白，反而清爽。" };
+          }
+          return { delta: 6, consequence: "為小人造謠，本家以禮應對、不失分寸，立場反而更穩。" };
+        }
+      },
+      {
+        label: "私下打聽底細，卻不向對方挑明",
+        delta: 1,
+        consequence: "本家暗中存了一道防備，日後若有事，可作底牌。"
+      },
+      {
+        label: "視作流言，當著媒人面焚毀此信",
+        dynamicDelta: (ctx) => {
+          // 50% 隨機骰: 焚毀的代價
+          if (ctx.roll < 0.5) {
+            return { delta: 8, consequence: "氣度傳出，對方銘感於心，這份信任成為親事最深的底。" };
+          }
+          return { delta: -5, consequence: "事後此事被旁人翻出證實，本家成了知情不問之人，難以辯白。" };
+        }
+      }
+    ]
+  },
+
+  // ----- 五・成婚 -----
+  {
+    id: "wedding-day",
+    stage: "成婚",
+    title: "婚當日的最後波折",
+    body: (a, b) => {
+      const aFam = a.familyId ? getFamilyNameById(a.familyId) : "本家";
+      return `迎親隊伍將至，府門外卻來了一位不速之客——或為${b.name}舊識，或為${aFam}族中故人，言辭間似有勸阻之意。婚禮已近，是停是行，只在當主一念。`;
+    },
+    kinds: [],
+    choices: [
+      {
+        label: "命人禮送其離去，婚禮如常進行",
+        delta: 4,
+        consequence: "場面雖緊張，禮數無虧，賓客皆稱本家有度。"
+      },
+      {
+        label: "暫停儀程，請此人入內細說",
+        dynamicDelta: (ctx) => {
+          // 50% 隨機骰
+          if (ctx.roll < 0.5) {
+            return { delta: 5, consequence: "此人所言果有玄機，本家避過一場禍事，對方家中事後亦感念這份審慎。" };
+          }
+          return { delta: -3, consequence: "誤了吉時，賓客面上不說，心裡卻覺本家不夠堅定。" };
+        }
+      },
+      {
+        label: "由當事人親自出面回應",
+        dynamicDelta: (ctx) => {
+          // 若本來合適度 >= 50,表示前面累積得不錯,當事人有底氣
+          if (ctx.currentScore >= 50) {
+            return { delta: 7, consequence: "當事人從容應對，這一幕反成佳話，傳為一段風雅。" };
+          }
+          return { delta: -4, consequence: "當事人尚有遲疑，當眾露怯，賓客間私語不止。" };
+        }
+      }
+    ]
+  }
+];
+
+// 為當前案卷依階段挑事件(同案卷不重複)
+// 為當前案卷依階段挑事件(同對人不重複)
+function pickNarrativeEvent(stageKey, kind, usedIds) {
+  const candidates = NARRATIVE_EVENTS.filter(ev => {
+    if (ev.stage !== stageKey) return false;
+    if (ev.kinds && ev.kinds.length && !ev.kinds.includes(kind)) return false;
+    if (usedIds && usedIds.includes(ev.id)) return false;
+    return true;
+  });
+  if (!candidates.length) return null;
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+// =============== 動作 → 劇情階段 映射 ===============
+// 只有「推進性質」的動作會綁劇情;駁回、悔婚、延案、改議等不綁
+const ACTION_TO_NARRATIVE_STAGE = {
+  "engage": "提親",                  // 議親成功(口頭說定)
+  "formalBetrothal": "議親",         // 正式定親
+  "setWeddingDate": "定親",          // 商定婚期
+  "marry": "婚前",                   // 正式成婚(成婚前先跑「婚前」階段)
+  "takeConsort": "議親"              // 納為側室/繼室
+};
+
+// 給定動作 key,回傳對應的劇情階段(沒有對應就回 null)
+function getNarrativeStageForAction(actionKey) {
+  return ACTION_TO_NARRATIVE_STAGE[actionKey] || null;
+}
+
+// =============== 負向動作的合適度清算 ===============
+// "破局型":清除進展紀錄,並記下 penalty(影響日後重議的初始合適度)
+// "扣分型":不清除進展,僅扣分
+const ACTION_PENALTY_RESET = {
+  // 破局型(清除進展 + 加 penalty)
+  "breakOldPromise":   { type: "reset", penalty: 25, label: "翻案改議／悔婚" },
+  "rejectByRite":      { type: "reset", penalty: 20, label: "禮法駁回" },
+  "rejectByHousehold": { type: "reset", penalty: 15, label: "後宅駁回" },
+  "breakWedding":      { type: "reset", penalty: 30, label: "婚事告吹" },
+  // 扣分型(保留進展,僅扣分)
+  "delayCase":          { type: "deduct", penalty: 8,  label: "暫緩" },
+  "preWeddingIncident": { type: "deduct", penalty: 5,  label: "婚前生變" }
+};
+
+// 在動作執行後,若是負向動作則清算合適度
+function applyNegativeAction(actionKey, aId, bId) {
+  const rule = ACTION_PENALTY_RESET[actionKey];
+  if (!rule) return null;  // 非負向動作
+
+  const all = getPairScores();
+  const key = pairKey(aId, bId);
+  const pd = all[key];
+  if (!pd) {
+    // 沒有 pair 資料,沒東西可清,只建立 penalty 紀錄
+    all[key] = { score: 0, baseScore: 0, stagesDone: [], history: [], penalty: rule.penalty, lastBreak: rule.label };
+    return rule;
+  }
+
+  if (rule.type === "reset") {
+    // 累計 penalty (若先前已有 penalty 再疊加)
+    const oldPenalty = pd.penalty || 0;
+    all[key] = {
+      score: 0,
+      baseScore: 0,
+      stagesDone: [],
+      history: [],
+      penalty: oldPenalty + rule.penalty,
+      lastBreak: rule.label
+    };
+  } else {
+    // 扣分型:不重置進展,只扣分
+    pd.score = Math.max(0, pd.score - rule.penalty);
+    pd.history.push({
+      stage: "－",
+      eventId: "_neg",
+      eventTitle: rule.label,
+      choiceLabel: "（負向動作）",
+      delta: -rule.penalty,
+      consequence: `因「${rule.label}」扣分。`,
+      year: state.gameYear
+    });
+  }
+  return rule;
+}
+
+// =============== 破局動作的「提出方」選擇 ===============
+// 點這些動作會先彈出選單讓玩家選誰提出
+const BREAKUP_ACTIONS = ["breakOldPromise", "rejectByRite", "rejectByHousehold"];
+
+function openDissolveModal(actionKey) {
+  const a = getMA(), b = getMB();
+  if (!a || !b) return;
+  const actions = getActions(a, b);
+  const label = (actions.find(x => x.key === actionKey) || {}).label || actionKey;
+  const stage = getStageOfPair(a, b);
+
+  // 預設提出方:A 方
+  const body = `
+    <div style="padding:14px 16px;">
+      <div class="intent-section-title">即將進行：${label}</div>
+      <div style="margin:10px 0;font-size:13px;color:#6b5b48;line-height:1.7;">
+        當前階段：<strong>${stage}</strong>。請選擇此次由哪一方提出，將如實記入婚配紀錄。
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
+        <label class="intent-kind">
+          <input type="radio" name="dissolveBy" value="A方" checked />
+          <div>
+            <div class="intent-kind-title">${a.name}（A 方）提出</div>
+            <div class="intent-kind-hint">本家主動。常見：以禮法、後宅秩序為由，或本家臨陣反悔。</div>
+          </div>
+        </label>
+        <label class="intent-kind">
+          <input type="radio" name="dissolveBy" value="B方" />
+          <div>
+            <div class="intent-kind-title">${b.name}（B 方）提出</div>
+            <div class="intent-kind-hint">對方家中主動。常見：對方家中變故、對方臨陣反悔。</div>
+          </div>
+        </label>
+        <label class="intent-kind">
+          <input type="radio" name="dissolveBy" value="雙方" />
+          <div>
+            <div class="intent-kind-title">雙方協議</div>
+            <div class="intent-kind-hint">私下談妥，對外不分主動方。</div>
+          </div>
+        </label>
+      </div>
+      <div class="intent-section" style="border-bottom:none;padding-bottom:0;">
+        <div class="intent-sub-title">緣由（選填，將寫入婚配紀錄）</div>
+        <textarea id="dissolveReasonInput" rows="2" placeholder="例：八字不合、對方家中喪事、另有更佳人選等"></textarea>
+      </div>
+      <div class="intent-actions" style="margin-top:14px;">
+        <button class="btn" id="dissolveCancelBtn">取消</button>
+        <button class="btn btn-primary" id="dissolveConfirmBtn">確認 → 執行</button>
+      </div>
+    </div>
+  `;
+  _$("dissolveTitle").textContent = "破局事由";
+  _$("dissolveBody").innerHTML = body;
+  _$("dissolveModal").classList.add("active");
+
+  _$("dissolveCancelBtn").addEventListener("click", closeDissolveModal);
+  _$("dissolveConfirmBtn").addEventListener("click", () => {
+    const by = document.querySelector('input[name="dissolveBy"]:checked').value;
+    const reason = _$("dissolveReasonInput").value.trim();
+    matchState.dissolveDecision = { actionKey, by, reason };
+    closeDissolveModal();
+    // 回流入口執行
+    executeActionWithNarrative(actionKey);
+  });
+}
+
+function closeDissolveModal() {
+  _$("dissolveModal").classList.remove("active");
+}
+
+// =============== pair 合適度儲存 ===============
+// 結構:state.pairScores[pairKey(aId,bId)] = {
+//   score: number,            目前合適度
+//   stagesDone: [stageKey...]  已跑過的劇情階段
+//   history: [{stage, eventId, eventTitle, choiceLabel, delta, consequence, year}]
+// }
+function getPairScores() {
+  if (!state.pairScores) state.pairScores = {};
+  return state.pairScores;
+}
+
+function getPairData(aId, bId) {
+  const key = pairKey(aId, bId);
+  const all = getPairScores();
+  return all[key] || null;
+}
+
+function ensurePairData(aId, bId) {
+  const key = pairKey(aId, bId);
+  const all = getPairScores();
+  if (!all[key] || all[key].penalty != null && all[key].history.length === 0) {
+    // 兩種情況會走這裡:
+    // 1. 從未建立
+    // 2. 曾被「破局型」動作清空,僅剩 penalty 紀錄 → 重新初始化但帶上 penalty
+    const a = findPerson(aId);
+    let base = 40;
+    if (a) {
+      const all2 = suggestMatchesFor(a);
+      const found = all2.find(x => x.person.id === bId);
+      if (found) base = Math.max(10, Math.min(80, 40 + found.score));
+    }
+    // 扣除過往的 penalty(若有)
+    const carryPenalty = (all[key] && all[key].penalty) || 0;
+    const carryLastBreak = (all[key] && all[key].lastBreak) || null;
+    const adjustedBase = Math.max(0, base - carryPenalty);
+    all[key] = {
+      score: adjustedBase,
+      baseScore: adjustedBase,
+      stagesDone: [],
+      history: [],
+      penalty: carryPenalty,
+      lastBreak: carryLastBreak
+    };
+  }
+  return all[key];
+}
+
+// =============== 新版:在動作執行前彈劇情 ===============
+// 入口:取代原本兩個直接呼叫 executeAction 的地方
+function executeActionWithNarrative(actionKey) {
+  const a = getMA(), b = getMB();
+  if (!a || !b) return;
+
+  // v6+:破局動作攔截:先讓玩家選擇提出方
+  // 已決定過(從 dissolve modal 確認後回流)就不再攔
+  if (BREAKUP_ACTIONS.includes(actionKey) && !matchState.dissolveDecision) {
+    openDissolveModal(actionKey);
+    return;
+  }
+
+  // 簡明模式(跳過劇情)
+  if (matchState.skipNarrative) {
+    executeAction(actionKey);
+    return;
+  }
+
+  const stageKey = getNarrativeStageForAction(actionKey);
+  if (!stageKey) {
+    // 此動作無對應劇情(例如駁回/悔婚)
+    executeAction(actionKey);
+    return;
+  }
+
+  // 取得或建立 pair 資料
+  const pd = ensurePairData(a.id, b.id);
+
+  // 此階段是否已跑過?
+  if (pd.stagesDone.includes(stageKey)) {
+    // 跑過就直接執行動作(避免玩家點兩次重跑劇情)
+    executeAction(actionKey);
+    return;
+  }
+
+  // 挑事件
+  const intent = matchState.intent || defaultMatchIntent();
+  const ev = pickNarrativeEvent(stageKey, intent.kind, pd.history.map(h => h.eventId));
+  if (!ev) {
+    // 此階段無可用事件(婚事性質排除等),直接執行動作
+    executeAction(actionKey);
+    return;
+  }
+
+  // 設置劇情暫存,開啟 modal
+  matchState.narrative = {
+    aId: a.id,
+    bId: b.id,
+    kind: intent.kind,
+    intent: JSON.parse(JSON.stringify(intent)),
+    stageKey,
+    pendingActionKey: actionKey,
+    currentEvent: ev
+  };
+  openNarrativeModal();
+}
+
+// 玩家在劇情 modal 做了選擇
+function chooseNarrative(choiceIdx) {
+  const n = matchState.narrative;
+  if (!n || !n.currentEvent) return;
+  const ev = n.currentEvent;
+  const choice = ev.choices[choiceIdx];
+  if (!choice) return;
+
+  const a = findPerson(n.aId), b = findPerson(n.bId);
+  if (!a || !b) return;
+
+  // 計算 delta
+  const tAge = getMatchAge(a), cAge = getMatchAge(b);
+  const ageDiff = (tAge != null && cAge != null) ? Math.abs(tAge - cAge) : null;
+  const tFam = state.families.find(f => f.id === a.familyId);
+  const cFam = state.families.find(f => f.id === b.familyId);
+  const tRank = tFam && tFam.standing ? DEFAULT_STANDINGS.indexOf(tFam.standing) : DEFAULT_STANDINGS.indexOf("尋常人家");
+  const cRank = cFam && cFam.standing ? DEFAULT_STANDINGS.indexOf(cFam.standing) : DEFAULT_STANDINGS.indexOf("尋常人家");
+  const standingDiff = cRank - tRank;
+
+  const pd = ensurePairData(a.id, b.id);
+  const ctx = {
+    a, b, ageDiff, intent: n.intent,
+    standingDiff,
+    currentScore: pd.score,
+    roll: Math.random()
+  };
+
+  let delta = 0;
+  let consequence = "";
+  if (typeof choice.dynamicDelta === "function") {
+    const r = choice.dynamicDelta(ctx);
+    delta = r.delta || 0;
+    consequence = r.consequence || choice.consequence || "";
+  } else {
+    delta = choice.delta || 0;
+    consequence = choice.consequence || "";
+  }
+
+  // 寫入 pair 資料
+  pd.score = Math.max(0, Math.min(100, pd.score + delta));
+  pd.stagesDone.push(n.stageKey);
+  pd.history.push({
+    stage: n.stageKey,
+    eventId: ev.id,
+    eventTitle: ev.title,
+    choiceLabel: choice.label,
+    delta,
+    consequence,
+    year: state.gameYear
+  });
+
+  // 改顯示為「結果頁」,等玩家按確認再執行動作
+  matchState.narrative.lastChoice = { choice, delta, consequence };
+  renderNarrative();
+}
+
+// 確認執行動作(劇情後的下一步)
+function confirmNarrativeAndExecute() {
+  const n = matchState.narrative;
+  if (!n) return;
+  const actionKey = n.pendingActionKey;
+  // 把劇情資訊先存到一個暫時容器,供 addChapter 寫入時引用
+  const pd = getPairData(n.aId, n.bId);
+  const lastHist = pd ? pd.history[pd.history.length - 1] : null;
+  matchState._narrativePrefix = lastHist ? {
+    stage: lastHist.stage,
+    eventTitle: lastHist.eventTitle,
+    choiceLabel: lastHist.choiceLabel,
+    delta: lastHist.delta,
+    consequence: lastHist.consequence,
+    score: pd.score
+  } : null;
+
+  // 清掉 narrative 暫存(以免下一步又被觸發劇情)
+  matchState.narrative = null;
+  closeNarrativeModal();
+
+  // 執行動作
+  executeAction(actionKey);
+
+  matchState._narrativePrefix = null;
+  saveState();
+  renderAll();
+}
+
+// 取消(不執行動作,但保留劇情選擇的合適度變化)
+// 思考:若取消會否造成不公?保險起見,取消視同放棄這次劇情,把剛加上去的紀錄拿掉
+function cancelNarrativeAction() {
+  const n = matchState.narrative;
+  if (!n) return;
+  if (!confirm("放棄此次動作?(已做的選擇與合適度變化將被撤回。)")) return;
+
+  // 若已做選擇,撤回最後一筆
+  const pd = getPairData(n.aId, n.bId);
+  if (pd && pd.history.length && n.lastChoice) {
+    const last = pd.history.pop();
+    pd.score = Math.max(0, Math.min(100, pd.score - last.delta));
+    // 也要把 stagesDone 最後一筆移除
+    const idx = pd.stagesDone.lastIndexOf(n.stageKey);
+    if (idx >= 0) pd.stagesDone.splice(idx, 1);
+  }
+
+  matchState.narrative = null;
+  closeNarrativeModal();
+  saveState();
+  renderAll();
+}
+
+function openNarrativeModal() {
+  _$("narrativeModal").classList.add("active");
+  renderNarrative();
+}
+
+function closeNarrativeModal() {
+  _$("narrativeModal").classList.remove("active");
+}
+
+function renderNarrative() {
+  const n = matchState.narrative;
+  if (!n) {
+    _$("narrativeBody").innerHTML = `<p class="empty">無進行中的劇情。</p>`;
+    return;
+  }
+  const a = findPerson(n.aId), b = findPerson(n.bId);
+  if (!a || !b) {
+    _$("narrativeBody").innerHTML = `<p class="empty">人物資料缺失。</p>`;
+    return;
+  }
+  const pd = ensurePairData(a.id, b.id);
+  const score = pd.score;
+  let barColor = "#a3491e";
+  if (score >= 70) barColor = "#5b7a3a";
+  else if (score >= 40) barColor = "#a08544";
+
+  // 標題列
+  _$("narrativeTitle").textContent = `${a.name} × ${b.name} ・ ${n.stageKey}`;
+
+  // 已做選擇?顯示結果頁
+  if (n.lastChoice) {
+    const lc = n.lastChoice;
+    const deltaText = lc.delta >= 0 ? `+${lc.delta}` : `${lc.delta}`;
+    const deltaClass = lc.delta >= 0 ? "pos" : "neg";
+    // 警示:若合適度過低,提示對方可能變卦
+    const lowWarn = score < 30 ? `
+      <div class="nar-warning">
+        <strong>警示：</strong>合適度已落至 ${score}。對方家中已生退意，若仍要強行推進此步，恐結下心結。
+      </div>
+    ` : "";
+
+    _$("narrativeBody").innerHTML = `
+      <div class="nar-score-block">
+        <div class="nar-score-label">合適度</div>
+        <div class="nar-score-row">
+          <div class="nar-score-bar"><div class="nar-score-fill" style="width:${score}%;background:${barColor};transition:width .4s, background .4s;"></div></div>
+          <div class="nar-score-num" style="color:${barColor};">${score}</div>
+        </div>
+        <div class="nar-score-trail">本次變動：<span class="nar-delta ${deltaClass}">${deltaText}</span></div>
+      </div>
+
+      <div class="nar-event">
+        <div class="nar-event-kicker">${n.stageKey}・${n.currentEvent.title}</div>
+        <div class="nar-event-body" style="background:#fdf9ed;">
+          <div style="margin-bottom:8px;"><strong>你的選擇：</strong>${lc.choice.label}</div>
+          <div>${lc.consequence}</div>
+        </div>
+      </div>
+
+      ${lowWarn}
+
+      <div class="intent-actions">
+        <button class="btn" id="narrativeBackBtn">放棄此次動作</button>
+        <button class="btn btn-primary" id="narrativeProceedBtn">繼續執行：${getActionLabel(n.pendingActionKey)}</button>
+      </div>
+    `;
+    _$("narrativeBackBtn").addEventListener("click", cancelNarrativeAction);
+    _$("narrativeProceedBtn").addEventListener("click", confirmNarrativeAndExecute);
+    return;
+  }
+
+  // 尚未選擇:顯示事件
+  const ev = n.currentEvent;
+  const bodyText = typeof ev.body === "function" ? ev.body(a, b) : ev.body;
+  const choicesHtml = ev.choices.map((ch, idx) => {
+    const deltaText = typeof ch.dynamicDelta === "function"
+      ? `<span class="nar-choice-delta unknown">?</span>`
+      : `<span class="nar-choice-delta ${ch.delta >= 0 ? "pos" : "neg"}">${ch.delta >= 0 ? "+" : ""}${ch.delta}</span>`;
+    return `
+      <button class="nar-choice" data-choice-idx="${idx}">
+        <div class="nar-choice-head">${deltaText}</div>
+        <div class="nar-choice-label">${ch.label}</div>
+        ${typeof ch.dynamicDelta === "function" ? '<div class="nar-choice-hint">（此選擇有變數，結果視情勢而定）</div>' : ''}
+      </button>
+    `;
+  }).join("");
+
+  _$("narrativeBody").innerHTML = `
+    <div class="nar-score-block">
+      <div class="nar-score-label">當前合適度</div>
+      <div class="nar-score-row">
+        <div class="nar-score-bar"><div class="nar-score-fill" style="width:${score}%;background:${barColor};"></div></div>
+        <div class="nar-score-num" style="color:${barColor};">${score}</div>
+      </div>
+      <div class="nar-score-trail">即將進行：${getActionLabel(n.pendingActionKey)}</div>
+    </div>
+
+    <div class="nar-event">
+      <div class="nar-event-kicker">${n.stageKey}階段</div>
+      <div class="nar-event-title">${ev.title}</div>
+      <div class="nar-event-body">${bodyText}</div>
+      <div class="nar-choices">${choicesHtml}</div>
+    </div>
+
+    <div class="intent-actions">
+      <button class="btn" id="narrativeAbandonBtn">放棄此次動作</button>
+    </div>
+  `;
+  document.querySelectorAll(".nar-choice").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.dataset.choiceIdx);
+      chooseNarrative(idx);
+    });
+  });
+  _$("narrativeAbandonBtn").addEventListener("click", () => {
+    matchState.narrative = null;
+    closeNarrativeModal();
+  });
+}
+
+// 取得動作的中文標籤
+function getActionLabel(actionKey) {
+  const a = getMA(), b = getMB();
+  if (!a || !b) return actionKey;
+  const actions = getActions(a, b);
+  const f = actions.find(x => x.key === actionKey);
+  return f ? f.label : actionKey;
 }
 
 // =============== 初始化 ===============
@@ -1458,10 +3015,38 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // 按鈕
-  _$("confirmActionBtn").addEventListener("click", () => { if (matchState.pendingAction) executeAction(matchState.pendingAction); });
+  _$("confirmActionBtn").addEventListener("click", () => { if (matchState.pendingAction) executeActionWithNarrative(matchState.pendingAction); });
   _$("cancelActionBtn").addEventListener("click", () => { matchState.pendingAction = null; renderAll(); });
   _$("randomizeBtn").addEventListener("click", randomizePair);
   _$("rollBtn").addEventListener("click", rollRandomEvent);
+
+  // v6+:簡明模式(跳過劇情)
+  const skipToggle = _$("skipNarrativeToggle");
+  if (skipToggle) {
+    skipToggle.checked = !!matchState.skipNarrative;
+    skipToggle.addEventListener("change", e => {
+      matchState.skipNarrative = e.target.checked;
+    });
+  }
+  const closeNarBtn = _$("closeNarrativeBtn");
+  if (closeNarBtn) closeNarBtn.addEventListener("click", closeNarrativeModal);
+  const narModal = _$("narrativeModal");
+  if (narModal) {
+    narModal.addEventListener("click", e => {
+      // 劇情視窗不允許點背景關閉(防止意外丟失選擇)
+      // 留空
+    });
+  }
+
+  // v6+:破局事由 modal
+  const closeDisBtn = _$("closeDissolveBtn");
+  if (closeDisBtn) closeDisBtn.addEventListener("click", closeDissolveModal);
+  const disModal = _$("dissolveModal");
+  if (disModal) {
+    disModal.addEventListener("click", e => {
+      if (e.target.id === "dissolveModal") closeDissolveModal();
+    });
+  }
   _$("archiveBtn").addEventListener("click", openArchive);
   _$("closeArchiveBtn").addEventListener("click", () => _$("archiveModal").classList.remove("active"));
   _$("archiveModal").addEventListener("click", e => { if (e.target.id === "archiveModal") _$("archiveModal").classList.remove("active"); });
@@ -1473,6 +3058,16 @@ document.addEventListener("DOMContentLoaded", () => {
   _$("suggestBBtn").addEventListener("click", () => openSuggestions("b"));
   _$("closeSuggestionsBtn").addEventListener("click", () => _$("suggestionsModal").classList.remove("active"));
   _$("suggestionsModal").addEventListener("click", e => { if (e.target.id === "suggestionsModal") _$("suggestionsModal").classList.remove("active"); });
+
+  // v6+:議親條件單 modal 關閉
+  const closeIntentBtn = _$("closeIntentBtn");
+  if (closeIntentBtn) closeIntentBtn.addEventListener("click", closeIntentDialog);
+  const intentModal = _$("intentModal");
+  if (intentModal) {
+    intentModal.addEventListener("click", e => {
+      if (e.target.id === "intentModal") closeIntentDialog();
+    });
+  }
 
   renderAll();
 });

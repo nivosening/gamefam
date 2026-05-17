@@ -18,6 +18,10 @@ const DEFAULT_REGIONS = [
 
 const DEFAULT_ORIGINS = ["皇室貴族" ,"名門望族", "商賈世家", "武林門派", "落魄寒門", "平民百姓"];
 
+// v6+:家族門第(用於議親計分時判斷門當戶對)
+// 由高至低,index 越小代表門第越高
+const DEFAULT_STANDINGS = ["上品世家", "中品仕宦", "尋常人家", "寒微之家"];
+
 // 據點與區域為一對一對應（每個據點只屬於一個區域）
 const DEFAULT_TERRITORIES = [
   { name: "京城王都", regionId: "central" },

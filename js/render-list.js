@@ -16,9 +16,6 @@ function renderFamilies() {
   // ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
   const keyword = $("familySearch")?.value.trim() || "";
 
-if (keyword) {
-  fams = fams.filter(f => f.name.includes(keyword));
-}
   // ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
   // ★ 未歸宗族區塊
   // ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
@@ -310,6 +307,8 @@ function renderFamilyDetail() {
   info.innerHTML = `
     <div class="detail-label">家族出身／區域／據點</div>
     <div class="detail-value">${f.origin || "出身未明"}｜${getRegionName(f.regionId) || "區域未定"}｜${f.territory || "據點未定"}</div>
+    <div class="detail-label" style="margin-top:8px;">家族門第</div>
+    <div class="detail-value">${f.standing || "尋常人家"}</div>
   `;
   box.appendChild(info);
 
@@ -369,6 +368,16 @@ function renderFamilyDetail() {
   populateTerritoryOptions();
   regionSel.addEventListener("change", populateTerritoryOptions);
 
+  // v6+:門第下拉
+  const standingSel = document.createElement("select");
+  standingSel.id = "editStandingSel";
+  DEFAULT_STANDINGS.forEach(s => {
+    const opt = document.createElement("option");
+    opt.value = s; opt.textContent = s;
+    standingSel.appendChild(opt);
+  });
+  standingSel.value = f.standing || "尋常人家";
+
   const saveBtn = document.createElement("button");
   saveBtn.className = "btn btn-small";
   saveBtn.textContent = "套用變更";
@@ -385,18 +394,20 @@ function renderFamilyDetail() {
     }
     f.origin = newOrigin;
     f.regionId = newRegionId;
+    f.standing = standingSel.value;  // v6+
     saveState();
     renderFamilies();
     renderFamilyDetail();
     renderRegions();
     renderOptionOverview();
     renderAdvisorLocationSelect();
-    advisorSay(`已更新「${f.name}」的出身／區域／據點設定。`);
+    advisorSay(`已更新「${f.name}」的出身／區域／據點／門第設定。`);
   });
 
   row.appendChild(originSel);
   row.appendChild(regionSel);
   row.appendChild(terrSel);
+  row.appendChild(standingSel);
   row.appendChild(saveBtn);
   edit.appendChild(row);
   box.appendChild(edit);
@@ -538,10 +549,19 @@ function renderFamilyDetail() {
           const yr = m.rel.marryYear ?? m.rel.year ?? null;
           const yrText = yr != null ? `星曆 ${yr} 年成婚` : "成婚年份未記";
 
-          // v6:推導婚姻當前狀態:已離異 / 已喪偶 / 已婚 / 議親中
+          // v6:推導婚姻當前狀態:已破局 / 已離異 / 已喪偶 / 已婚 / 議親中
           let statusText = "";
           let statusClass = "";
-          if (m.rel.endYear || m.rel.matchStage === "已離異") {
+          if (m.rel.dissolved) {
+            // v6+:破局
+            const stageDesc = m.rel.dissolveStage === "婚期籌備" ? "婚前悔婚" : "定親後破局";
+            const byDesc = m.rel.dissolvedBy === "雙方" ? "雙方協議"
+                         : m.rel.dissolvedBy === "A方" ? `${m.inMember.name}提出`
+                         : m.rel.dissolvedBy === "B方" ? `${m.outMember.name}提出`
+                         : "";
+            statusText = `${stageDesc}${byDesc ? "（" + byDesc + "）" : ""}${m.rel.dissolveYear ? "，星曆 " + m.rel.dissolveYear + " 年" : ""}`;
+            statusClass = "marriage-status-dissolved";
+          } else if (m.rel.endYear || m.rel.matchStage === "已離異") {
             statusText = m.rel.endYear ? `星曆 ${m.rel.endYear} 年離異` : "已離異";
             statusClass = "marriage-status-ended";
           } else if (m.rel.matchStage === "已喪偶") {
@@ -683,7 +703,7 @@ function renderFamilyDetail() {
         ? spouses.map(sp => {
             const ag = getAge(sp);
             const meta = [];
-            const sr = (p.spouseRelations || []).find(r => r.id === sp.id);
+            const sr = (p.spouseRelations || []).find(r => r.id === sp.id && !r.dissolved);
             if (sr) {
               let s = sr.type;
               if (sr.marryYear != null) s += `,星曆 ${sr.marryYear} 年結婚`;
@@ -696,6 +716,29 @@ function renderFamilyDetail() {
             return `<div class="relation-item"><a href="#" class="person-link" onclick="goToPerson(${sp.id});return false;">${sp.name}</a>${metaHtml}</div>`;
           }).join("")
         : '<div class="relation-empty">無</div>';
+
+      // v6+:曾配(破局紀錄)
+      const dissolvedRels = (p.spouseRelations || []).filter(r => r.dissolved);
+      const exSpHtml = dissolvedRels.length
+        ? dissolvedRels.map(r => {
+            const ex = state.persons.find(x => x.id === r.id);
+            if (!ex) return "";
+            const meta = [];
+            // 破局類型描述
+            const stageDesc = r.dissolveStage === "婚期籌備" ? "婚前悔婚" : "定親後破局";
+            meta.push(stageDesc);
+            if (r.dissolveYear != null) meta.push(`星曆 ${r.dissolveYear} 年`);
+            if (r.dissolvedBy) {
+              const byDesc = r.dissolvedBy === "雙方" ? "雙方協議" :
+                             r.dissolvedBy === "A方" ? `${p.name}提出` :
+                             `${ex.name}提出`;
+              meta.push(byDesc);
+            }
+            if (r.dissolveReason) meta.push(`緣由：${r.dissolveReason}`);
+            const metaHtml = ` <span class="relation-meta ex-spouse-meta">(${meta.join("｜")})</span>`;
+            return `<div class="relation-item ex-spouse-item"><a href="#" class="person-link" onclick="goToPerson(${ex.id});return false;">${ex.name}</a>${metaHtml}</div>`;
+          }).filter(Boolean).join("")
+        : "";
 
       // 子女
       const children = (p.childIds || [])
@@ -734,6 +777,10 @@ function renderFamilyDetail() {
         <div class="member-relations">
           <div class="member-relations-label">配偶</div>
           <div class="member-relations-value">${spHtml}</div>
+          ${exSpHtml ? `
+            <div class="member-relations-label">曾配</div>
+            <div class="member-relations-value">${exSpHtml}</div>
+          ` : ""}
           <div class="member-relations-label">子女 (${children.length})</div>
           <div class="member-relations-value">${chHtml}</div>
           <div class="member-relations-label">父母</div>

@@ -55,6 +55,10 @@ function loadState() {
     });
     state.chronicle = Array.isArray(data.chronicle) ? data.chronicle : [];
 
+    // v6+:議親案卷紀錄與合適度資料的持久化
+    state.matchChapters = Array.isArray(data.matchChapters) ? data.matchChapters : [];
+    state.pairScores = (data.pairScores && typeof data.pairScores === "object") ? data.pairScores : {};
+
     normalizeRelations();
   } catch (e) {
     console.warn("載入存檔失敗", e);

@@ -19,6 +19,7 @@ function addFamily(data) {
     regionId: data.regionId || "",
     territory: terrName || "",
     notes: data.notes || "",
+    standing: data.standing || "尋常人家",  // v6+:家族門第
     allies: []         // v3 新增:盟友家族 ID 列表
   };
   state.families.push(f);

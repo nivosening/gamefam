@@ -82,6 +82,18 @@ function renderOptionSelects(){
     quickOriginSel.appendChild(b);
   });
 
+  // v6+:家族門第下拉
+  const standingSel = $("familyStanding");
+  if (standingSel) {
+    standingSel.innerHTML = "";
+    DEFAULT_STANDINGS.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s; opt.textContent = s;
+      standingSel.appendChild(opt);
+    });
+    standingSel.value = "尋常人家";  // 預設
+  }
+
   terrSel.innerHTML = "";
   quickTerrSel.innerHTML = "";
   const t0 = document.createElement("option");
