@@ -50,6 +50,11 @@
                 <textarea id="familyNotes"></textarea>
               </label>
             </div>
+            <div class="form-row">
+              <label>家族門第
+                <select id="familyStanding"></select>
+              </label>
+            </div>
             <div class="small-row">
               <input type="text" id="newOrigin" placeholder="新增出身" />
               <button type="button" id="addOriginBtn" class="btn btn-small">新增出身</button>
@@ -167,10 +172,10 @@
 <div class="card card-list">
   <h2 class="card-title">家族列表</h2>
   
-   <input id="familySearch" 
-      input type="text"
+   <input id="familySearch"
+      type="text"
       placeholder="搜尋家族…"
-      style="margin-bottom:10px; width:100%;" 
+      style="margin-bottom:10px; width:100%;"
       oninput="renderFamilies()">
 
 

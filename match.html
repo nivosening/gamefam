@@ -351,6 +351,527 @@
       .match-grid { grid-template-columns: 1fr; }
       .two-col, .actions, .input-grid, .input-grid.three { grid-template-columns: 1fr; }
     }
+
+    /* ============ v6+:議親條件單 ============ */
+    .intent-section {
+      padding: 14px 16px;
+      border-bottom: 1px dashed #d4c5a3;
+    }
+    .intent-section:last-child { border-bottom: none; }
+    .intent-section-title {
+      font-size: 13px;
+      letter-spacing: .08em;
+      color: #6b5b48;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .intent-count {
+      font-size: 11px;
+      color: #8b7355;
+      background: #f7f1e3;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    /* 婚事性質卡 */
+    .intent-kind-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 8px;
+    }
+    .intent-kind {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 10px 12px;
+      border: 1px solid #d4c5a3;
+      border-radius: 10px;
+      background: #fffdf8;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .intent-kind:hover { background: #fbf6e8; }
+    .intent-kind.selected {
+      background: #4a3f33;
+      color: #fffdf8;
+      border-color: #4a3f33;
+    }
+    .intent-kind.selected .intent-kind-hint { color: #e8dec8; }
+    .intent-kind input { margin-top: 3px; }
+    .intent-kind-title { font-size: 14px; font-weight: 600; }
+    .intent-kind-hint { font-size: 11px; color: #8b7355; margin-top: 2px; }
+
+    /* 看重 / 忌諱勾選 */
+    .intent-check-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 6px;
+    }
+    .intent-check {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .intent-check:hover { background: #f7f1e3; }
+    .intent-check input { cursor: pointer; }
+
+    /* 子區塊(出身、職業詳細選擇) */
+    .intent-subblock {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: #f7f1e3;
+      border-radius: 10px;
+      transition: opacity .2s;
+    }
+    .intent-subblock.disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    .intent-sub-title {
+      font-size: 12px;
+      color: #6b5b48;
+      margin-bottom: 6px;
+    }
+    .intent-tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .intent-tag {
+      padding: 4px 10px;
+      border: 1px solid #c9b88a;
+      border-radius: 14px;
+      background: #fffdf8;
+      font-size: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .intent-tag:hover { background: #fbf6e8; }
+    .intent-tag.selected {
+      background: #4a3f33;
+      color: #fffdf8;
+      border-color: #4a3f33;
+    }
+    #intentTabooOriginSel {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1px solid #c9b88a;
+      border-radius: 8px;
+      background: #fffdf8;
+      font: inherit;
+    }
+
+    /* 備註 */
+    #intentNote {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #c9b88a;
+      border-radius: 10px;
+      background: #fffdf8;
+      font: inherit;
+      resize: vertical;
+    }
+
+    /* 採用按鈕列 */
+    .intent-actions {
+      padding: 14px 16px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      background: #f7f1e3;
+    }
+    .btn-primary {
+      background: #4a3f33;
+      color: #fffdf8;
+      border-color: #4a3f33;
+    }
+
+    /* ============ 推薦清單頂部的條件摘要 ============ */
+    .intent-summary {
+      background: #f7f1e3;
+      border: 1px solid #d4c5a3;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      font-size: 12px;
+    }
+    .intent-summary-row {
+      display: flex;
+      gap: 8px;
+      padding: 2px 0;
+    }
+    .intent-summary-label {
+      color: #8b7355;
+      min-width: 64px;
+      flex-shrink: 0;
+    }
+    .intent-summary-value { color: #4a3f33; }
+    .intent-summary-actions {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .intent-summary-hint {
+      font-size: 11px;
+      color: #a39074;
+      font-style: italic;
+    }
+
+    /* ============ v6+:劇情議親案卷 ============ */
+    .nar-header {
+      padding: 14px 16px;
+      border-bottom: 1px dashed #d4c5a3;
+    }
+    .nar-pair {
+      font-size: 16px;
+      font-weight: 600;
+      color: #4a3f33;
+      margin-bottom: 10px;
+    }
+    .nar-stages {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .nar-stage-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 14px;
+      font-size: 12px;
+      background: #f7f1e3;
+      color: #8b7355;
+      border: 1px solid #d4c5a3;
+    }
+    .nar-stage-pill.done {
+      background: #e6dec4;
+      color: #6b5b48;
+    }
+    .nar-stage-pill.current {
+      background: #4a3f33;
+      color: #fffdf8;
+      border-color: #4a3f33;
+    }
+    .nar-stage-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      font-size: 10px;
+    }
+    .nar-stage-pill.pending .nar-stage-num {
+      background: #d4c5a3;
+      color: #fff;
+    }
+
+    /* 合適度條 */
+    .nar-score-block {
+      padding: 14px 16px;
+      border-bottom: 1px dashed #d4c5a3;
+    }
+    .nar-score-label {
+      font-size: 12px;
+      letter-spacing: .08em;
+      color: #8b7355;
+      margin-bottom: 6px;
+    }
+    .nar-score-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .nar-score-bar {
+      flex: 1;
+      height: 18px;
+      background: #f0e8d2;
+      border-radius: 9px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.08);
+    }
+    .nar-score-fill {
+      height: 100%;
+      border-radius: 9px;
+    }
+    .nar-score-num {
+      font-size: 24px;
+      font-weight: 700;
+      min-width: 50px;
+      text-align: right;
+    }
+    .nar-score-trail {
+      font-size: 11px;
+      color: #a39074;
+      margin-top: 5px;
+      font-style: italic;
+    }
+
+    /* 事件卡 */
+    .nar-event {
+      padding: 16px;
+      border-bottom: 1px dashed #d4c5a3;
+    }
+    .nar-event-kicker {
+      font-size: 11px;
+      letter-spacing: .15em;
+      color: #8b7355;
+      margin-bottom: 6px;
+    }
+    .nar-event-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #4a3f33;
+      margin-bottom: 10px;
+    }
+    .nar-event-body {
+      font-size: 14px;
+      line-height: 1.7;
+      color: #4a3f33;
+      padding: 12px 14px;
+      background: #f7f1e3;
+      border-radius: 10px;
+      margin-bottom: 14px;
+    }
+
+    /* 選項 */
+    .nar-choices {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .nar-choice {
+      text-align: left;
+      padding: 12px 14px;
+      border: 1px solid #d4c5a3;
+      border-radius: 12px;
+      background: #fffdf8;
+      cursor: pointer;
+      font: inherit;
+      transition: background .15s, border-color .15s, transform .1s;
+    }
+    .nar-choice:hover {
+      background: #fbf6e8;
+      border-color: #4a3f33;
+    }
+    .nar-choice:active {
+      transform: scale(0.99);
+    }
+    .nar-choice-head {
+      margin-bottom: 4px;
+    }
+    .nar-choice-delta {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .nar-choice-delta.pos { background: #dcebc9; color: #5b7a3a; }
+    .nar-choice-delta.neg { background: #f0d4c4; color: #a3491e; }
+    .nar-choice-delta.unknown {
+      background: #e8dec8;
+      color: #6b5b48;
+    }
+    .nar-choice-label {
+      font-size: 14px;
+      color: #4a3f33;
+      line-height: 1.5;
+    }
+    .nar-choice-hint {
+      font-size: 11px;
+      color: #a39074;
+      font-style: italic;
+      margin-top: 4px;
+    }
+
+    /* 結局 */
+    .nar-outcome {
+      padding: 18px 16px;
+      border-bottom: 1px dashed #d4c5a3;
+      text-align: center;
+      background: linear-gradient(180deg, #fffdf8 0%, #f7f1e3 100%);
+    }
+    .nar-outcome-label {
+      font-size: 12px;
+      letter-spacing: .2em;
+      color: #8b7355;
+      margin-bottom: 8px;
+    }
+    .nar-outcome-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #4a3f33;
+      margin-bottom: 6px;
+    }
+    .nar-outcome-desc {
+      font-size: 13px;
+      color: #6b5b48;
+      line-height: 1.7;
+    }
+
+    /* 歷史紀錄 */
+    .nar-history {
+      padding: 14px 16px;
+      background: #f7f1e3;
+    }
+    .nar-history-title {
+      font-size: 11px;
+      letter-spacing: .15em;
+      color: #8b7355;
+      margin-bottom: 10px;
+    }
+    .nar-history-row {
+      padding: 8px 0;
+      border-bottom: 1px dashed #d4c5a3;
+    }
+    .nar-history-row:last-child { border-bottom: none; }
+    .nar-history-stage {
+      font-size: 13px;
+      font-weight: 600;
+      color: #4a3f33;
+    }
+    .nar-history-choice {
+      font-size: 12px;
+      color: #6b5b48;
+      margin-top: 2px;
+    }
+    .nar-delta {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 6px;
+    }
+    .nar-delta.pos { background: #dcebc9; color: #5b7a3a; }
+    .nar-delta.neg { background: #f0d4c4; color: #a3491e; }
+    .nar-history-conseq {
+      font-size: 12px;
+      color: #8b7355;
+      margin-top: 4px;
+      font-style: italic;
+      line-height: 1.6;
+    }
+    .chapter-pre {
+      font: inherit;
+      margin: 4px 0 0;
+      white-space: pre-wrap;
+      color: #4a3f33;
+      line-height: 1.7;
+    }
+    .chapter.narrative {
+      border-left: 3px solid #a08544;
+      background: #fdf9ed;
+    }
+
+    /* ============ v6+:議親狀態區的合適度條 ============ */
+    .pair-score-empty {
+      margin-top: 10px;
+      padding: 8px 10px;
+      background: #f7f1e3;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #8b7355;
+      font-style: italic;
+    }
+    .pair-score-block {
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: #f7f1e3;
+      border-radius: 10px;
+    }
+    .pair-score-label {
+      font-size: 11px;
+      letter-spacing: .1em;
+      color: #8b7355;
+      margin-bottom: 5px;
+    }
+    .pair-score-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .pair-score-bar {
+      flex: 1;
+      height: 14px;
+      background: #fffdf8;
+      border-radius: 7px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.08);
+    }
+    .pair-score-fill {
+      height: 100%;
+      border-radius: 7px;
+      transition: width .4s, background .4s;
+    }
+    .pair-score-num {
+      font-size: 20px;
+      font-weight: 700;
+      min-width: 40px;
+      text-align: right;
+    }
+    .pair-score-trail {
+      font-size: 11px;
+      color: #a39074;
+      margin-top: 4px;
+      font-style: italic;
+    }
+    .pair-score-break-warn {
+      margin-top: 8px;
+      padding: 6px 10px;
+      background: #f0d4c4;
+      border-left: 2px solid #a3491e;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #6b3014;
+      line-height: 1.6;
+    }
+    .pair-score-details {
+      margin-top: 8px;
+      font-size: 12px;
+    }
+    .pair-score-details summary {
+      cursor: pointer;
+      color: #6b5b48;
+      padding: 4px 0;
+    }
+    .pair-score-hist-row {
+      padding: 6px 0;
+      border-top: 1px dashed #d4c5a3;
+    }
+    .pair-score-hist-choice {
+      color: #6b5b48;
+      margin-top: 2px;
+    }
+    .pair-score-hist-conseq {
+      color: #8b7355;
+      font-style: italic;
+      margin-top: 3px;
+      line-height: 1.6;
+    }
+
+    /* 劇情視窗警示 */
+    .nar-warning {
+      margin: 0 16px 12px;
+      padding: 10px 12px;
+      background: #f0d4c4;
+      border-left: 3px solid #a3491e;
+      border-radius: 6px;
+      color: #6b3014;
+      font-size: 13px;
+      line-height: 1.7;
+    }
   </style>
 </head>
 <body>
@@ -365,6 +886,10 @@
         <label class="toggle-row">
           <input type="checkbox" id="forcePickToggle" />
           強推(可挑任何在世人物)
+        </label>
+        <label class="toggle-row">
+          <input type="checkbox" id="skipNarrativeToggle" />
+          簡明模式(跳過劇情)
         </label>
         <button class="btn primary-btn" id="randomizeBtn">隨機開案</button>
         <button class="btn" id="rollBtn">擲一下</button>
@@ -404,6 +929,7 @@
           <div class="small-muted">系統判斷</div>
           <h2 id="caseTitle"></h2>
           <pre class="summary" id="caseSummary"></pre>
+          <div id="pairScoreBox"></div>
         </div>
 
         <div class="action-panel">
@@ -484,6 +1010,39 @@
         <button class="btn" id="closeSuggestionsBtn">關閉</button>
       </div>
       <div class="modal-body" id="suggestionsBody"></div>
+    </div>
+  </div>
+
+  <!-- v6+:議親條件單(本次議親意向) -->
+  <div class="modal-backdrop" id="intentModal">
+    <div class="modal-inner">
+      <div class="modal-header">
+        <h3 id="intentTitle">本次議親條件</h3>
+        <button class="btn" id="closeIntentBtn">關閉</button>
+      </div>
+      <div class="modal-body" id="intentBody"></div>
+    </div>
+  </div>
+
+  <!-- v6+:劇情議親案卷 -->
+  <div class="modal-backdrop" id="narrativeModal">
+    <div class="modal-inner">
+      <div class="modal-header">
+        <h3 id="narrativeTitle">劇情議親</h3>
+        <button class="btn" id="closeNarrativeBtn">關閉</button>
+      </div>
+      <div class="modal-body" id="narrativeBody"></div>
+    </div>
+  </div>
+
+  <!-- v6+:破局事由(誰提出) -->
+  <div class="modal-backdrop" id="dissolveModal">
+    <div class="modal-inner">
+      <div class="modal-header">
+        <h3 id="dissolveTitle">破局事由</h3>
+        <button class="btn" id="closeDissolveBtn">關閉</button>
+      </div>
+      <div class="modal-body" id="dissolveBody"></div>
     </div>
   </div>
 
