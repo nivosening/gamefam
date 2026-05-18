@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>大周名位卷宗｜職位與名分登錄冊</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;500;600;700;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1a1410;
+  --paper:#ede3cc;
+  --paper-deep:#ddd0b2;
+  --paper-light:#f6efd9;
+  --paper-shadow:#b8a583;
+  --vermilion:#8b2a1f;
+  --vermilion-soft:rgba(139,42,31,.08);
+  --gold:#8a6e3f;
+  --gold-dim:#6b5530;
+  --rule:rgba(107,85,48,.35);
+  --rule-solid:#6b5530;
+  --muted:#6a5940;
+  --green:#3f5f45;
+  --blue:#344f6a;
+  --gray:#7a6e62;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:"Noto Serif TC",serif;
+  background:var(--paper);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.75' numOctaves='4'/%3E%3CfeColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.08 0 0 0 0 0.04 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  color:var(--ink);
+  line-height:1.7;
+  min-height:100vh;
+}
+
+/* ── HEADER ── */
+.header{
+  border-bottom:2px solid var(--rule-solid);
+  padding:2.8rem 2rem 2.2rem;
+  text-align:center;
+  background:linear-gradient(180deg,var(--paper-deep) 0%,var(--paper) 100%);
+  position:relative;
+}
+.header-ornament{
+  display:flex;align-items:center;justify-content:center;gap:1.2rem;margin-bottom:.6rem;
+}
+.header-ornament-line{flex:1;max-width:120px;height:1px;background:linear-gradient(90deg,transparent,var(--gold-dim))}
+.header-ornament-line.r{background:linear-gradient(90deg,var(--gold-dim),transparent)}
+.header-ornament-diamond{
+  width:8px;height:8px;border:1.5px solid var(--vermilion);transform:rotate(45deg);
+}
+h1{
+  font-family:"ZCOOL XiaoWei","Noto Serif TC",serif;
+  font-size:clamp(1.9rem,4.5vw,3.2rem);
+  letter-spacing:.28em;
+  font-weight:400;
+  line-height:1.2;
+}
+.sub{margin-top:.45rem;font-size:.88rem;color:var(--muted);letter-spacing:.3em}
+.seal{
+  display:inline-block;margin-top:1rem;padding:.3rem .85rem;
+  border:1.5px solid var(--vermilion);color:var(--vermilion);
+  background:rgba(139,42,31,.05);font-size:.8rem;letter-spacing:.28em;
+}
+
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:240px minmax(0,1fr);max-width:1500px;margin:0 auto}
+.sidebar{
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+  padding:1.8rem 1.2rem;border-right:1px solid var(--rule);
+  background:var(--paper-deep);
+}
+.side-title{
+  font-size:.72rem;letter-spacing:.45em;color:var(--vermilion);
+  margin-bottom:.9rem;padding-bottom:.5rem;
+  border-bottom:1px solid var(--rule);
+}
+.nav-btn{
+  display:flex;align-items:center;gap:.5rem;
+  width:100%;text-align:left;padding:.5rem .65rem;margin-bottom:.25rem;
+  border:none;background:transparent;color:var(--muted);cursor:pointer;
+  font-size:.9rem;letter-spacing:.04em;font-family:inherit;
+  border-left:2px solid transparent;transition:all .18s;
+}
+.nav-btn:hover{color:var(--vermilion);background:var(--vermilion-soft);border-left-color:rgba(139,42,31,.3)}
+.nav-btn.active{color:var(--vermilion);background:var(--vermilion-soft);border-left-color:var(--vermilion);font-weight:600}
+.side-note{
+  margin-top:1.5rem;padding-top:1rem;border-top:1px dashed var(--rule);
+  font-size:.75rem;color:var(--muted);line-height:1.65;
+}
+
+/* ── MAIN ── */
+.main{padding:0 2rem 5rem}
+
+/* ── TOOLBAR ── */
+.toolbar{
+  position:sticky;top:0;z-index:30;
+  background:rgba(237,227,204,.96);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--rule);
+  padding:.85rem 0;margin-bottom:1.5rem;
+}
+.toolbar-row{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+.toolbar-row input[type=search]{
+  flex:1;min-width:180px;
+}
+input,select,textarea{
+  border:1px solid var(--rule-solid);
+  background:rgba(255,252,240,.8);color:var(--ink);
+  padding:.45rem .65rem;font-size:.88rem;
+  font-family:inherit;
+}
+textarea{min-height:68px;resize:vertical;line-height:1.55}
+input:focus,select:focus,textarea:focus{
+  outline:none;
+  border-color:var(--vermilion);
+  box-shadow:0 0 0 2px rgba(139,42,31,.12);
+  background:#fffcf0;
+}
+
+.btn{
+  border:1px solid rgba(107,85,48,.55);background:transparent;color:var(--ink);
+  padding:.42rem .75rem;font-size:.83rem;letter-spacing:.06em;cursor:pointer;
+  white-space:nowrap;font-family:inherit;transition:all .15s;
+}
+.btn:hover{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn.primary{border-color:var(--vermilion);background:var(--vermilion);color:var(--paper)}
+.btn.primary:hover{background:#6e1e15;border-color:#6e1e15}
+.btn.gold{border-color:var(--gold-dim);color:var(--gold-dim)}
+.btn.gold:hover{background:var(--gold-dim);color:var(--paper)}
+.btn.danger{border-color:var(--vermilion);color:var(--vermilion)}
+.btn.danger:hover{background:var(--vermilion);color:var(--paper)}
+.btn.sm{padding:.28rem .55rem;font-size:.78rem}
+
+/* ── STATS ── */
+.stats{
+  display:flex;gap:.75rem;margin-bottom:1.5rem;flex-wrap:wrap;
+}
+.stat-card{
+  flex:1;min-width:90px;
+  border:1px solid var(--rule);
+  background:rgba(255,252,240,.5);
+  padding:.75rem 1rem;
+  display:flex;flex-direction:column;align-items:center;gap:.2rem;
+}
+.stat-label{font-size:.68rem;letter-spacing:.22em;color:var(--muted)}
+.stat-num{
+  font-family:"ZCOOL XiaoWei",serif;
+  font-size:1.8rem;color:var(--vermilion);line-height:1;
+}
+
+/* ── SECTION ── */
+.section-head{
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  padding:.9rem 0 .8rem;margin:2rem 0 1rem;
+  border-top:2px solid var(--ink);border-bottom:1px solid var(--rule);
+}
+.section-title{
+  font-family:"ZCOOL XiaoWei",serif;font-size:1.4rem;letter-spacing:.18em;
+}
+.section-meta{color:var(--muted);font-size:.8rem;margin-top:.18rem}
+
+/* ── POSITION CARD ── */
+.position-list{display:grid;gap:.55rem;}
+.position-card{
+  border:1px solid var(--rule);
+  background:rgba(255,252,240,.52);
+  overflow:hidden;
+  transition:border-color .18s;
+}
+.position-card:hover{border-color:rgba(107,85,48,.6)}
+.position-card.open{border-color:rgba(139,42,31,.35)}
+
+/* ── POSITION SUMMARY ROW ── */
+.position-summary{
+  display:flex;align-items:center;gap:0;
+  cursor:pointer;
+  padding:0;
+  min-height:52px;
+}
+.position-summary:hover{background:rgba(139,42,31,.03)}
+
+.ps-cat{
+  flex:0 0 60px;
+  text-align:center;
+  font-size:.7rem;letter-spacing:.12em;color:var(--muted);
+  border-right:1px solid var(--rule);
+  padding:.7rem .4rem;
+  align-self:stretch;display:flex;align-items:center;justify-content:center;
+}
+.ps-main{
+  flex:1;padding:.65rem .9rem;
+  display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap;
+}
+.ps-position{
+  font-size:1.05rem;letter-spacing:.06em;font-weight:600;
+  color:var(--ink);
+}
+.ps-system{
+  font-size:.82rem;color:var(--muted);
+}
+.ps-rank{
+  font-size:.78rem;color:var(--gold-dim);
+  border:1px solid rgba(107,85,48,.4);
+  padding:.05rem .35rem;margin-left:.2rem;
+}
+.ps-occupants{
+  font-size:.82rem;color:var(--muted);margin-left:auto;
+  white-space:nowrap;
+}
+.ps-status{
+  flex:0 0 auto;padding:.65rem .7rem;
+  display:flex;align-items:center;
+}
+.ps-actions{
+  flex:0 0 auto;
+  display:flex;gap:.35rem;align-items:center;
+  padding:.45rem .7rem;
+  border-left:1px solid var(--rule);
+}
+
+/* ── STATUS PILL ── */
+.status-pill{
+  display:inline-block;padding:.12rem .45rem;
+  border:1px solid currentColor;font-size:.75rem;
+  white-space:nowrap;letter-spacing:.04em;
+}
+.status-在任,.status-已冊封,.status-已定未冊{color:var(--green)}
+.status-空缺{color:var(--vermilion)}
+.status-待議,.status-待定{color:var(--gold-dim)}
+.status-疑案中,.status-暫停職權{color:var(--blue)}
+.status-已故,.status-被廢,.status-外嫁,.status-未入冊{color:var(--gray)}
+
+/* ── DETAILS PANEL ── */
+.details{
+  display:none;
+  border-top:1px solid var(--rule);
+  background:rgba(212,196,163,.14);
+  padding:1rem 1.1rem 1.1rem;
+}
+.position-card.open .details{display:block}
+.details-top{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:.75rem;gap:.6rem;
+}
+.details-title{font-size:.82rem;letter-spacing:.2em;color:var(--vermilion)}
+.details-note{font-size:.8rem;color:var(--muted);margin-top:.2rem;font-style:italic}
+
+/* ── INFO ROW (職銜詳情) ── */
+.info-row{
+  display:flex;gap:1.5rem;flex-wrap:wrap;
+  padding:.6rem .8rem;margin-bottom:.8rem;
+  background:rgba(255,252,240,.5);border:1px solid var(--rule);
+  font-size:.85rem;
+}
+.info-item{display:flex;flex-direction:column;gap:.1rem}
+.info-label{font-size:.68rem;letter-spacing:.18em;color:var(--muted)}
+.info-value{color:var(--ink)}
+
+/* ── SLOT LIST ── */
+.slot-list{display:grid;gap:.6rem}
+.slot-card{
+  border:1px solid rgba(107,85,48,.55);
+  background:rgba(255,252,240,.65);
+  padding:.75rem .9rem;
+}
+.slot-top{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:.55rem;gap:.5rem;
+}
+.slot-name{font-weight:700;color:var(--vermilion);letter-spacing:.06em;font-size:.95rem}
+.slot-empty-name{color:var(--muted);font-style:italic}
+
+/* 改成三欄佈局，更清爽 */
+.slot-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:.55rem;
+}
+.slot-grid .wide{grid-column:span 2}
+.slot-grid .full{grid-column:1/-1}
+.slot-grid label{display:flex;flex-direction:column;gap:.2rem;font-size:.75rem;letter-spacing:.12em;color:var(--muted)}
+.slot-grid label input,
+.slot-grid label select,
+.slot-grid label textarea{
+  width:100%;font-size:.88rem;margin-top:.1rem;
+}
+.empty-slot{
+  color:var(--muted);font-style:italic;font-size:.88rem;
+  padding:.7rem;border:1px dashed var(--rule);text-align:center;
+}
+
+/* ── FORM PANEL ── */
+.form-panel{
+  border:1px solid var(--rule);background:rgba(255,252,240,.6);
+  padding:1.2rem;margin:1rem 0 1.5rem;display:none;
+}
+.form-panel.show{display:block}
+.form-title{
+  font-family:"ZCOOL XiaoWei",serif;font-size:1.1rem;letter-spacing:.15em;
+  margin-bottom:1rem;padding-bottom:.6rem;border-bottom:1px solid var(--rule);
+}
+.form-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:.65rem;
+}
+.form-grid .wide{grid-column:span 2}
+.form-grid .full{grid-column:1/-1}
+.form-grid label{display:flex;flex-direction:column;gap:.25rem;font-size:.75rem;letter-spacing:.14em;color:var(--muted)}
+.form-grid label input,
+.form-grid label select,
+.form-grid label textarea{width:100%;margin-top:.05rem;}
+.form-actions{margin-top:.9rem;display:flex;gap:.6rem;justify-content:flex-end}
+
+/* ── FOOTER ── */
+.footer-tools{margin-top:1.5rem;display:flex;flex-wrap:wrap;gap:.6rem;align-items:center}
+.small-note{color:var(--muted);font-size:.8rem}
+.hidden-file{display:none}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;right:1.2rem;bottom:1.2rem;
+  background:var(--ink);color:var(--paper);
+  padding:.65rem 1rem;border:1.5px solid var(--vermilion);
+  opacity:0;transform:translateY(12px);pointer-events:none;
+  transition:.22s;z-index:100;font-size:.85rem;letter-spacing:.05em;
+}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1100px){
+  .slot-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:900px){
+  .layout{grid-template-columns:1fr}
+  .sidebar{position:relative;height:auto;border-right:none;border-bottom:1px solid var(--rule);padding:1rem}
+  .form-grid{grid-template-columns:1fr 1fr}
+  .stats{flex-wrap:wrap}
+}
+@media(max-width:640px){
+  .main{padding:0 1rem 4rem}
+  .form-grid,.slot-grid{grid-template-columns:1fr}
+  .form-grid .wide,.slot-grid .wide{grid-column:auto}
+  .header:before,.header:after{display:none}
+  .ps-cat{display:none}
+}
+@media print{
+  .sidebar,.toolbar,.form-panel,.footer-tools,.btn,.toast,.ps-actions{display:none!important}
+  .layout{display:block}
+  body{background:#fff}
+  .main{padding:0}
+  .details{display:block!important}
+}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="header-ornament">
+    <div class="header-ornament-line"></div>
+    <div class="header-ornament-diamond"></div>
+    <div class="header-ornament-line r"></div>
+  </div>
+  <h1>大周名位卷宗</h1>
+  <div class="sub">官爵、后妃、宗室、內宅名分登錄冊</div>
+  <div class="seal">慕容後宅 · 展卷詳查版</div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="side-title">卷宗分類</div>
+    <button class="nav-btn active" data-category="全部">全部卷宗</button>
+    <button class="nav-btn" data-category="後宮">後宮妃嬪卷</button>
+    <button class="nav-btn" data-category="皇族">皇族宗室卷</button>
+    <button class="nav-btn" data-category="朝官">朝官職位卷</button>
+    <button class="nav-btn" data-category="女官">女官職位卷</button>
+    <button class="nav-btn" data-category="王府">王府內宅卷</button>
+    <button class="nav-btn" data-category="侯府">侯府內宅卷</button>
+    <button class="nav-btn" data-category="軍職">軍職武將卷</button>
+    <button class="nav-btn" data-category="學院">學院職位卷</button>
+    <div class="side-note">
+      主卷只列職銜、定員、空缺。<br>
+      點「展開」後可分席填寫人物。<br>
+      例如「貴妃｜定員 2」會展開成第一席、第二席。
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="toolbar">
+      <div class="toolbar-row">
+        <input id="searchInput" type="search" placeholder="搜尋人物、職位、家族、備註…">
+        <select id="categoryFilter"><option value="全部">全部分類</option></select>
+        <select id="statusFilter"><option value="全部">全部狀態</option></select>
+        <button class="btn primary" id="showAdd">新增職銜</button>
+        <button class="btn gold" id="exportJson">匯出</button>
+        <button class="btn" id="importBtn">匯入</button>
+      </div>
+    </div>
+
+    <section class="stats" id="stats"></section>
+
+    <section class="form-panel" id="formPanel">
+      <div class="form-title">新增／編輯職銜</div>
+      <div class="form-grid">
+        <label>所屬分類<select id="fCategory"></select></label>
+        <label>系統／機構／府邸<input id="fSystem" placeholder="例如：後宮、吏部、寧王府"></label>
+        <label>職位／名分<input id="fPosition" placeholder="例如：皇貴妃、尚書、王妃"></label>
+        <label>位階／品級<input id="fRank" placeholder="例如：正二品、妃位"></label>
+        <label>定員<input id="fQuota" type="number" min="0" value="1"></label>
+        <label>狀態<select id="fStatus"></select></label>
+        <label class="wide">職銜備註<input id="fNote" placeholder="例如：副后級、可空缺、由禮部冊封"></label>
+      </div>
+      <div class="form-actions">
+        <button class="btn" id="cancelForm">取消</button>
+        <button class="btn primary" id="saveForm">儲存</button>
+      </div>
+    </section>
+
+    <section id="sections"></section>
+
+    <div class="footer-tools">
+      <button class="btn danger" id="resetData">重置為初始資料</button>
+      <span class="small-note">重置會清除目前瀏覽器中已填寫的內容，建議先匯出 JSON 備份。</span>
+    </div>
+
+    <input class="hidden-file" type="file" id="importFile" accept="application/json">
+  </main>
+</div>
+
+<div class="toast" id="toast">已儲存</div>
+
+<script>
+const STORAGE_KEY = "dazhou_position_dossier_slots_v2";
+const categories = ["後宮","皇族","朝官","女官","王府","侯府","軍職","學院"];
+const statuses = ["在任","空缺","待議","待定","已定未冊","已冊封","未入冊","疑案中","暫停職權","外嫁","已故","被廢"];
+
+function uid(){return "id-" + Math.random().toString(36).slice(2) + Date.now().toString(36);}
+function slot(name="", status="空缺", extra={}){
+  return {id:uid(), name, age:"", origin:"", relation:"", residence:"", status, note:"", ...extra};
+}
+
+const initialData = [
+  // ── 後宮妃嬪卷 ──
+  {id:uid(), category:"後宮", system:"後宮", position:"皇后", rank:"中宮正位", quota:1, status:"在任", note:"母儀天下，掌宮權、禮權、教權、議政權與監察權。", slots:[slot("姚嘉晨","在任",{age:"42-44",origin:"姚氏",relation:"太子周元宇、寧王周元書、閔如公主之母",residence:"中宮",note:"當朝皇后。"})]},
+  {id:uid(), category:"後宮", system:"後宮", position:"皇貴妃", rank:"副后級", quota:1, status:"空缺", note:"可空缺。", slots:[slot()]},
+  {id:uid(), category:"後宮", system:"後宮", position:"貴妃", rank:"高階妃嬪", quota:2, status:"空缺", note:"定員二席，分席登錄。", slots:[slot("許貴妃","在任",{origin:"許氏",relation:"趙王周元清之母"}), slot()]},
+  {id:uid(), category:"後宮", system:"後宮", position:"妃", rank:"一宮主位", quota:4, status:"在任", note:"一宮主位，可撫育皇子女。", slots:[slot("秦妃","在任",{origin:"秦氏",relation:"魏王之母，已生龍鳳胎"}), slot("蓉妃","在任",{relation:"周元祥、周元夢之母"}), slot("昭妃／古倫公主","在任",{origin:"烏桓",relation:"烏桓新汗阿史那烏烈之妹，入大周後宮"}), slot()]},
+  {id:uid(), category:"後宮", system:"後宮", position:"貴嬪／嬪", rank:"中位嬪御", quota:6, status:"疑案中", note:"貴嬪介於妃位以下、嬪位以上。", slots:[slot("公孫貴嬪","在任",{origin:"公孫氏",relation:"韓王周元予之母"}), slot("呂嬪","疑案中",{age:"18",relation:"孕事與姚墨文私通流言相關",note:"牽涉皇后母家與慕容旁支。"}), slot(), slot(), slot(), slot()]},
+  {id:uid(), category:"後宮", system:"後宮", position:"貴人", rank:"低階主位", quota:0, status:"空缺", note:"人數不定；定員 0 代表不限額。", slots:[]},
+  {id:uid(), category:"後宮", system:"後宮", position:"才人／美人", rank:"低階后妃", quota:0, status:"空缺", note:"人數不定；可作候補妃嬪或短線人物。", slots:[]},
+  {id:uid(), category:"後宮", system:"後宮", position:"常在", rank:"低階后妃", quota:0, status:"空缺", note:"人數不定。", slots:[]},
+  {id:uid(), category:"後宮", system:"後宮", position:"答應", rank:"低階后妃", quota:0, status:"疑案中", note:"人數不定。", slots:[slot("周答應","疑案中",{relation:"曾生皇子，皇子出生後不久夭折",note:"與暖夢香、安胎香案高度相關。"})]},
+  {id:uid(), category:"後宮", system:"後宮", position:"官女子／御侍", rank:"準后妃／候召", quota:0, status:"空缺", note:"準后妃，候召；需經正式冊封才成為后妃。", slots:[]},
+
+  // ── 皇族宗室卷 ──
+  {id:uid(), category:"皇族", system:"皇帝直系", position:"皇帝", rank:"至尊", quota:1, status:"在任", note:"", slots:[slot("周顯光","在任",{age:"約46",origin:"大周皇室",residence:"皇宮"})]},
+  {id:uid(), category:"皇族", system:"皇帝直系", position:"皇太后", rank:"太后", quota:1, status:"在任", note:"仍主導皇室婚配與宗室平衡。", slots:[slot("長孫順德","在任",{age:"65-70",origin:"長孫氏"})]},
+  {id:uid(), category:"皇族", system:"東宮", position:"太子", rank:"儲君", quota:1, status:"在任", note:"", slots:[slot("周元宇","在任",{age:"約25",origin:"皇后所出",relation:"太子妃謝令儀之夫",residence:"東宮"})]},
+  {id:uid(), category:"皇族", system:"東宮", position:"太子妃", rank:"儲妃", quota:1, status:"在任", note:"", slots:[slot("謝令儀","在任",{age:"22",origin:"謝氏",relation:"周元宇正妻",residence:"東宮"})]},
+  {id:uid(), category:"皇族", system:"親王／皇子", position:"親王／皇子", rank:"皇子封王", quota:0, status:"在任", note:"定員不限，分人登錄。", slots:[slot("周元書","暫停職權",{age:"約24",origin:"皇后所出",relation:"寧王，曾掌軍權",residence:"寧王府",note:"因王府風波暫停軍務。"}), slot("周元清","在任",{age:"約22",origin:"許貴妃所出",relation:"趙王",residence:"趙王府"}), slot("周元予","待議",{age:"約17",origin:"公孫貴嬪所出",relation:"韓王，牽涉梁璦蘭、高晨安婚配線",residence:"韓王府"}), slot("魏王","已定未冊",{age:"約10-14",origin:"秦妃所出",relation:"皇帝定宋雲岫為魏王妃人選",residence:"魏王府／宮中"}), slot("周元祥","在任",{age:"約6-8",origin:"蓉妃所出",relation:"幼皇子"}), slot("周元夢","在任",{age:"約4-6",origin:"蓉妃所出",relation:"幼皇女或幼皇子設定可再確認"})]},
+  {id:uid(), category:"皇族", system:"公主", position:"公主／長公主", rank:"皇女封號", quota:0, status:"在任", note:"定員不限，分人登錄。", slots:[slot("端如公主／安北長公主","外嫁",{origin:"大周皇室",relation:"北嫁烏桓新汗阿史那烏烈",residence:"烏桓",note:"已和親在外。"}), slot("閔如公主","在任",{origin:"皇后所出",relation:"皇后之女"}), slot("安靖公主","已故",{origin:"大周皇室",relation:"舊年和親公主，阿梨為其隨嫁女官",residence:"北境／烏桓舊案",note:"原稱病死，實則死因有冤。"})]},
+  {id:uid(), category:"皇族", system:"親王系", position:"親王妃", rank:"王府正妃", quota:0, status:"在任", note:"各親王府正妃統一登錄，也可於王府卷分府細填。", slots:[slot("顧明婉","在任",{age:"15-17",origin:"顧氏",relation:"寧王妃，周承曜、周昭寧之母"}), slot("宋雲岫","已定未冊",{origin:"宋氏",relation:"魏王妃人選"}), slot("梁璦蘭","待議",{origin:"外族／漢名梁璦蘭",relation:"韓王欲娶之人"})]},
+  {id:uid(), category:"皇族", system:"親王系", position:"世子／郡王", rank:"親王子嗣封號", quota:0, status:"空缺", note:"親王子女可封世子、郡王。", slots:[slot("周承曜","在任",{origin:"寧王府",relation:"寧王嫡子，顧明婉所出，世子第一順位"})]},
+  {id:uid(), category:"皇族", system:"親王系", position:"郡主／縣主", rank:"親王女封號", quota:0, status:"在任", note:"親王之女可封郡主、縣主。", slots:[slot("周昭寧","在任",{origin:"寧王府",relation:"顧明婉所出嫡女"}), slot("周昭棠","在任",{origin:"寧王府",relation:"春桃所出"})]},
+  {id:uid(), category:"皇族", system:"遠支宗室", position:"國公／將軍／宗室子", rank:"遠支宗室男性封號", quota:0, status:"空缺", note:"遠支宗室、旁支男性可用。", slots:[]},
+  {id:uid(), category:"皇族", system:"遠支宗室", position:"郡君／縣君／宗女", rank:"遠支宗室女性封號", quota:0, status:"空缺", note:"遠支宗室女眷可用。", slots:[slot("周宜妍","待議",{origin:"宗室旁支／和遠大長公主外孫女",relation:"入嗣旁支嫡妹，嫁楚王庶長子案核心"})]},
+
+  // ── 朝官職位卷 ──
+  {id:uid(), category:"朝官", system:"三公", position:"太師／太傅／太保", rank:"正一品", quota:3, status:"空缺", note:"多為榮銜或元老重臣。", slots:[slot(),slot(),slot()]},
+  {id:uid(), category:"朝官", system:"三孤", position:"少師／少傅／少保", rank:"從一品", quota:3, status:"空缺", note:"次於三公。", slots:[slot(),slot(),slot()]},
+  {id:uid(), category:"朝官", system:"內閣", position:"內閣首輔", rank:"正一品", quota:1, status:"空缺", note:"票擬、議政，朝堂中樞最高實權位之一。", slots:[slot()]},
+  {id:uid(), category:"朝官", system:"內閣", position:"內閣次輔", rank:"正一品／從一品", quota:1, status:"空缺", note:"首輔副手。", slots:[slot()]},
+  {id:uid(), category:"朝官", system:"內閣", position:"協辦大學士", rank:"從一品", quota:2, status:"空缺", note:"內閣高位副職。", slots:[slot(),slot()]},
+  {id:uid(), category:"朝官", system:"軍機處", position:"領班軍機大臣", rank:"正一品／從一品", quota:1, status:"空缺", note:"掌軍國機密、密旨。", slots:[slot()]},
+  {id:uid(), category:"朝官", system:"軍機處", position:"軍機大臣", rank:"從一品至正二品", quota:4, status:"空缺", note:"軍機處核心。", slots:[slot(),slot(),slot(),slot()]},
+  {id:uid(), category:"朝官", system:"軍機處", position:"軍機章京", rank:"中低品文官", quota:0, status:"空缺", note:"掌軍機文書。", slots:[]},
+  {id:uid(), category:"朝官", system:"吏部", position:"尚書", rank:"正二品", quota:1, status:"空缺", note:"掌官員任免、考核、誥命。", slots:[slot()]},
+  {id:uid(), category:"朝官", system:"戶部", position:"尚書", rank:"正二品", quota:1, status:"空缺", note:"掌財政、稅賦、戶籍、漕運。", slots:[slot()]},
+  {id:uid(), category:"朝官", system:"禮部", position:"尚書", rank:"正二品", quota:1, status:"空缺", note:"掌禮制、祭祀、冊封、科舉、外交。", slots:[slot()]},
+  {id:uid(), category:"朝官", system:"兵部", position:"尚書", rank:"正二品", quota:1, status:"空缺", note:"掌軍政、武官任免、軍械、調兵。", slots:[slot()]},
+  {id:uid(), category:"朝官", system:"刑部", position:"尚書", rank:"正二品", quota:1, status:"空缺", note:"掌刑獄、審判、律法。", slots:[slot()]},
+  {id:uid(), category:"朝官", system:"工部", position:"尚書", rank:"正二品", quota:1, status:"空缺", note:"掌工程、營造、水利、宮殿。", slots:[slot()]},
+  {id:uid(), category:"朝官", system:"六部", position:"左右侍郎", rank:"從二品", quota:12, status:"空缺", note:"六部各左、右侍郎。", slots:[slot(),slot(),slot(),slot(),slot(),slot(),slot(),slot(),slot(),slot(),slot(),slot()]},
+  {id:uid(), category:"朝官", system:"六部", position:"郎中", rank:"正五品", quota:0, status:"空缺", note:"六部中層官員。", slots:[]},
+  {id:uid(), category:"朝官", system:"六部", position:"員外郎", rank:"從五品", quota:0, status:"空缺", note:"六部中層副職。", slots:[]},
+  {id:uid(), category:"朝官", system:"六部", position:"主事", rank:"正六品", quota:0, status:"空缺", note:"六部基層主辦官。", slots:[]},
+  {id:uid(), category:"朝官", system:"都察院", position:"左都御史", rank:"正二品", quota:1, status:"空缺", note:"統領都察院，可彈劾百官。", slots:[slot()]},
+  {id:uid(), category:"朝官", system:"都察院", position:"御史", rank:"正五品以下", quota:0, status:"空缺", note:"品級雖低，但可彈劾百官。", slots:[]},
+  {id:uid(), category:"朝官", system:"大理寺", position:"大理寺卿", rank:"正三品", quota:1, status:"空缺", note:"重大案件覆審，三法司會審必有。", slots:[slot()]},
+  {id:uid(), category:"朝官", system:"通政司", position:"通政使", rank:"正三品", quota:1, status:"空缺", note:"中高級文官，可作奏章交通與朝廷文書線。", slots:[slot()]},
+  {id:uid(), category:"朝官", system:"翰林院", position:"修撰／編修", rank:"正六品至正七品", quota:0, status:"空缺", note:"掌詔書、修史、講學。", slots:[]},
+  {id:uid(), category:"朝官", system:"國子監", position:"祭酒／司業", rank:"正四品至從四品", quota:2, status:"空缺", note:"最高官學主官與副職。", slots:[slot(),slot()]},
+  {id:uid(), category:"朝官", system:"內務府", position:"內務府總管", rank:"內廷官", quota:1, status:"空缺", note:"宮廷財物採買，香藥供應鏈可牽涉。", slots:[slot()]},
+  {id:uid(), category:"朝官", system:"太醫院", position:"院使／院判", rank:"醫官", quota:2, status:"空缺", note:"御藥房、安胎香、暖夢香案可牽涉。", slots:[slot(),slot()]},
+
+  // ── 女官職位卷 ──
+  {id:uid(), category:"女官", system:"女史臺", position:"女史令", rank:"正三品", quota:1, status:"空缺", note:"女官中樞。", slots:[slot()]},
+  {id:uid(), category:"女官", system:"女史臺", position:"左右女史丞", rank:"從三品", quota:2, status:"空缺", note:"女史令副職。", slots:[slot("","空缺",{note:"左女史丞"}), slot("","空缺",{note:"右女史丞"})]},
+  {id:uid(), category:"女官", system:"女史臺", position:"司籍／司制／司記／司禮女史", rank:"正五品", quota:4, status:"空缺", note:"女史臺四司。", slots:[slot(),slot(),slot(),slot()]},
+  {id:uid(), category:"女官", system:"女史臺", position:"典籍／記注女史", rank:"正七品", quota:0, status:"空缺", note:"掌典籍、記注。", slots:[]},
+  {id:uid(), category:"女官", system:"女史臺", position:"掌案女史", rank:"正八品", quota:0, status:"空缺", note:"案卷、卷宗、文書職。", slots:[]},
+  {id:uid(), category:"女官", system:"司議院", position:"司議女官", rank:"女臣議政", quota:0, status:"空缺", note:"議政、諫言、修法、女眷政令。", slots:[]},
+  {id:uid(), category:"女官", system:"女察院", position:"女察使", rank:"正四品", quota:1, status:"空缺", note:"監察女官、命婦、宗室女眷、宮廷案件。", slots:[slot()]},
+  {id:uid(), category:"女官", system:"女察院", position:"女察御史", rank:"女官監察", quota:0, status:"空缺", note:"女察院屬官。", slots:[]},
+  {id:uid(), category:"女官", system:"女學士院", position:"女學士", rank:"正四品／正五品", quota:4, status:"空缺", note:"草詔、修史、講學、女學考選。", slots:[slot(),slot(),slot(),slot()]},
+  {id:uid(), category:"女官", system:"宗室女官司", position:"宗室女官令", rank:"正四品", quota:1, status:"空缺", note:"宗室女眷婚配、入嗣、封號、玉牒旁錄。", slots:[slot()]},
+  {id:uid(), category:"女官", system:"宗室女官司", position:"宗室掌籍／掌婚女官", rank:"宗室女官", quota:2, status:"空缺", note:"可處理周宜妍、宗室婚配與女眷陳情。", slots:[slot(),slot()]},
+  {id:uid(), category:"女官", system:"後宮女官", position:"尚宮", rank:"正五品", quota:1, status:"空缺", note:"掌宮中事務。", slots:[slot()]},
+  {id:uid(), category:"女官", system:"後宮女官", position:"宮中女史", rank:"正七品", quota:0, status:"空缺", note:"掌文書、禮儀記錄。", slots:[]},
+
+  // ── 王府內宅卷 ──
+  {id:uid(), category:"王府", system:"寧王府", position:"王妃", rank:"正妃", quota:1, status:"在任", note:"寧王府主母。", slots:[slot("顧明婉","在任",{age:"15-17",origin:"顧氏",relation:"周承曜、周昭寧之母",residence:"正院",note:"已生龍鳳胎。"})]},
+  {id:uid(), category:"王府", system:"寧王府", position:"側妃", rank:"側妃", quota:2, status:"空缺", note:"側室高位。", slots:[slot(),slot()]},
+  {id:uid(), category:"王府", system:"寧王府", position:"侍妾", rank:"低等側室", quota:0, status:"在任", note:"定員不限，依人物分席。", slots:[slot("蘇冰","在任",{age:"20",origin:"身世曖昧",relation:"周承晏之母",note:"是否為秀和之女仍曖昧。"})]},
+  {id:uid(), category:"王府", system:"寧王府", position:"外居內眷／外室", rank:"府外名分", quota:0, status:"未入冊", note:"府外安置，入冊後子女為庶。", slots:[slot("春桃","未入冊",{age:"17-20",origin:"侍女出身",relation:"周承煦、周昭棠之母",residence:"府外",note:"已生雙胞胎，遠離京城。"})]},
+  {id:uid(), category:"王府", system:"寧王府", position:"子嗣", rank:"王府子女", quota:0, status:"在任", note:"寧王府目前五名子嗣。", slots:[slot("周承晏","在任",{origin:"蘇冰所出",relation:"庶長子，皇帝賜名"}), slot("周承曜","在任",{origin:"顧明婉所出",relation:"嫡子，世子第一順位"}), slot("周昭寧","在任",{origin:"顧明婉所出",relation:"嫡女"}), slot("周承煦","在任",{origin:"春桃所出",relation:"外居內眷之子"}), slot("周昭棠","在任",{origin:"春桃所出",relation:"外居內眷之女"})]},
+  {id:uid(), category:"王府", system:"趙王府", position:"王妃", rank:"正妃", quota:1, status:"空缺", note:"趙王府主母。", slots:[slot()]},
+  {id:uid(), category:"王府", system:"趙王府", position:"側妃／庶妃", rank:"側室", quota:0, status:"空缺", note:"趙王府側室位。", slots:[]},
+  {id:uid(), category:"王府", system:"韓王府", position:"王妃", rank:"正妃", quota:1, status:"待議", note:"梁璦蘭不做暗處之人。", slots:[slot("梁璦蘭","待議",{origin:"外族／漢名梁璦蘭",relation:"韓王想娶之人",residence:"韓王府正院"})]},
+  {id:uid(), category:"王府", system:"韓王府", position:"側妃", rank:"側妃", quota:2, status:"待議", note:"公孫貴嬪要求韓王同時娶高晨安為側妃。", slots:[slot("高晨安","待議",{age:"13",relation:"已表明不願此時列入韓王妃名冊",note:"目前更適合女史禮制課旁修。"}), slot()]},
+  {id:uid(), category:"王府", system:"魏王府", position:"王妃", rank:"正妃", quota:1, status:"已定未冊", note:"皇帝直接定下。", slots:[slot("宋雲岫","已定未冊",{age:"比魏王年長兩歲",origin:"宋氏",relation:"魏王妃人選"})]},
+  {id:uid(), category:"王府", system:"王府通用", position:"庶妃", rank:"低等側室", quota:0, status:"空缺", note:"王府可用通用名分。", slots:[]},
+  {id:uid(), category:"王府", system:"王府通用", position:"通房", rank:"未正式名分", quota:0, status:"空缺", note:"子女需認祖後入冊。", slots:[]},
+
+  // ── 侯府內宅卷 ──
+  {id:uid(), category:"侯府", system:"慕容侯府", position:"家主", rank:"侯府主君", quota:1, status:"在任", note:"慕容侯府核心。", slots:[slot("慕容秀和","在任",{age:"47",origin:"慕容氏",relation:"子女眾多",residence:"慕容侯府"})]},
+  {id:uid(), category:"侯府", system:"慕容侯府", position:"侯夫人（正妻）", rank:"正妻", quota:1, status:"在任", note:"掌府中諸務。", slots:[slot("獨孤秋月","在任",{age:"約45",origin:"獨孤氏",relation:"世華、世蘭、世菊之母",residence:"正院"})]},
+  {id:uid(), category:"侯府", system:"慕容侯府", position:"平妻", rank:"次正妻", quota:3, status:"在任", note:"三席分開登錄。", slots:[slot("杜若","在任",{age:"約44",origin:"杜氏",relation:"世苗名義母親，實際世苗為她與黃庭勻之子",note:"掌財務。"}), slot("江雪雁","在任",{age:"約43",origin:"江氏",relation:"世蓉、世苳、世芝之母"}), slot("璟和公主","在任",{age:"36",origin:"皇族",relation:"六女一子之母",note:"平妻／特封，身份特殊。"})]},
+  {id:uid(), category:"侯府", system:"慕容侯府", position:"貴妾／側夫人", rank:"高等側室", quota:0, status:"空缺", note:"高於一般妾室。", slots:[]},
+  {id:uid(), category:"侯府", system:"慕容侯府", position:"妾室", rank:"妾室", quota:0, status:"在任", note:"定員不限，依人物分席。", slots:[slot("柳歆然","在任",{age:"約34-36",origin:"侯府養女出身",relation:"世芸、世萫之母"}), slot("巧巧","在任",{age:"約28-32",origin:"侍女出身",relation:"世蒼之母"}), slot("孟飛","在任",{age:"約30-34",relation:"曾生一子，名字未定"}), slot("孟昭","在任",{age:"約29-33",relation:"世艾之母"}), slot("謝媚","在任",{age:"約39-42"})]},
+  {id:uid(), category:"侯府", system:"慕容侯府", position:"侍妾", rank:"低等側室", quota:0, status:"空缺", note:"侍奉型名分。", slots:[]},
+  {id:uid(), category:"侯府", system:"慕容侯府", position:"通房／外室", rank:"未正式／府外名分", quota:0, status:"空缺", note:"子女認祖後為庶出。", slots:[]},
+
+  // ── 軍職武將卷 ──
+  {id:uid(), category:"軍職", system:"武將品級", position:"大將軍／上柱國", rank:"正一品", quota:2, status:"空缺", note:"國家級統帥。", slots:[slot(),slot()]},
+  {id:uid(), category:"軍職", system:"武將品級", position:"都督／提督／鎮北將軍", rank:"從一品", quota:0, status:"空缺", note:"掌一方軍務。", slots:[]},
+  {id:uid(), category:"軍職", system:"禁軍", position:"領侍衛內大臣", rank:"正一品", quota:1, status:"空缺", note:"掌皇帝近身侍衛。", slots:[slot()]},
+  {id:uid(), category:"軍職", system:"禁軍", position:"禁軍統領", rank:"正二品", quota:1, status:"空缺", note:"掌羽林衛、金吾衛、龍武衛等。", slots:[slot()]},
+  {id:uid(), category:"軍職", system:"北境軍", position:"鎮北將軍", rank:"從一品", quota:1, status:"空缺", note:"對應烏桓、左賢王舊支。", slots:[slot()]},
+  {id:uid(), category:"軍職", system:"武將品級", position:"總兵", rank:"正二品", quota:0, status:"空缺", note:"鎮守一鎮。", slots:[]},
+  {id:uid(), category:"軍職", system:"武將品級", position:"副將", rank:"從二品", quota:0, status:"空缺", note:"副統帥。", slots:[]},
+  {id:uid(), category:"軍職", system:"武將品級", position:"參將", rank:"正三品", quota:0, status:"空缺", note:"分守一路。", slots:[]},
+  {id:uid(), category:"軍職", system:"武將品級", position:"游擊將軍", rank:"從三品", quota:0, status:"空缺", note:"機動作戰。", slots:[]},
+  {id:uid(), category:"軍職", system:"武將品級", position:"都司", rank:"正四品", quota:0, status:"空缺", note:"掌營衛。", slots:[]},
+  {id:uid(), category:"軍職", system:"武將品級", position:"守備", rank:"正五品", quota:0, status:"空缺", note:"守城、守關。", slots:[]},
+  {id:uid(), category:"軍職", system:"武將品級", position:"千總／把總", rank:"正六品至正七品", quota:0, status:"空缺", note:"基層武官。", slots:[]},
+  {id:uid(), category:"軍職", system:"女武官", position:"女將軍／女都尉／女校尉", rank:"從二品至正六品", quota:0, status:"空缺", note:"女武官系統。", slots:[]},
+  {id:uid(), category:"軍職", system:"女武官", position:"女護衛長", rank:"正六品以上", quota:0, status:"已故", note:"定員不限。", slots:[slot("阿梨","已故",{origin:"安靖公主隨嫁女官",relation:"為護主刺傷胡蘭，後被割舌吊死",residence:"北境舊案",note:"安靖公主案核心人物。"})]},
+
+  // ── 學院職位卷 ──
+  {id:uid(), category:"學院", system:"皇家書院／崇文書院", position:"山長", rank:"書院主官", quota:1, status:"空缺", note:"皇子、皇女、宗室、高門子弟教育核心。", slots:[slot()]},
+  {id:uid(), category:"學院", system:"皇家書院／明政堂", position:"政務課教習", rank:"教習", quota:0, status:"空缺", note:"政務課。", slots:[]},
+  {id:uid(), category:"學院", system:"皇家書院／修禮堂", position:"禮制課教習", rank:"教習", quota:0, status:"空缺", note:"禮制宗室婚配課。", slots:[]},
+  {id:uid(), category:"學院", system:"皇家書院／蘭臺女院", position:"女院教習", rank:"教習", quota:0, status:"空缺", note:"女子分院。", slots:[]},
+  {id:uid(), category:"學院", system:"皇家書院／觀政齋", position:"觀政教習", rank:"教習", quota:0, status:"空缺", note:"旁聽朝政與觀政訓練。", slots:[]},
+  {id:uid(), category:"學院", system:"皇家書院／外藩館", position:"外藩館教習", rank:"教習", quota:0, status:"空缺", note:"外族質子、和親相關。", slots:[]},
+  {id:uid(), category:"學院", system:"女史院", position:"禮制課教習", rank:"教習", quota:0, status:"空缺", note:"高晨安轉入女史禮制課旁修。", slots:[]},
+  {id:uid(), category:"學院", system:"慕容家學／青梧書院", position:"男學教習", rank:"家學教習", quota:0, status:"空缺", note:"慕容家男學。", slots:[]},
+  {id:uid(), category:"學院", system:"慕容家學／秋水女塾", position:"女學教習", rank:"家學教習", quota:0, status:"空缺", note:"慕容家女子教育。", slots:[]},
+  {id:uid(), category:"學院", system:"慕容家學／立雪齋", position:"禮法教習", rank:"家學教習", quota:0, status:"空缺", note:"禮法、女官預備。", slots:[]},
+  {id:uid(), category:"學院", system:"慕容家學／衡蘭堂", position:"帳冊財務教習", rank:"家學教習", quota:0, status:"空缺", note:"帳冊財務。", slots:[]},
+  {id:uid(), category:"學院", system:"慕容家學／藏鋒院", position:"武學教習", rank:"家學教習", quota:0, status:"空缺", note:"武學、護衛。", slots:[]}
+];
+
+let data = loadData();
+let currentCategory = "全部";
+let editingId = null;
+let openIds = new Set();
+
+function dossierKey(item){
+  return [item.category || "", item.system || "", item.position || "", item.rank || ""].join("｜");
+}
+function hasNamedSlot(item, name){
+  return (item.slots || []).some(s => (s.name || "").trim() === name);
+}
+function mergeWithInitial(saved){
+  const list = Array.isArray(saved) ? saved : [];
+  list.forEach(item => {
+    item.id ||= uid();
+    item.slots ||= [];
+    item.slots.forEach(s => s.id ||= uid());
+  });
+
+  const byKey = new Map(list.map(item => [dossierKey(item), item]));
+
+  initialData.forEach(base => {
+    const key = dossierKey(base);
+    const existing = byKey.get(key);
+    if(!existing){
+      list.push(base);
+      byKey.set(key, base);
+      return;
+    }
+
+    existing.slots ||= [];
+
+    // 修正早期版本的寧王妃暫名，改回目前正史設定。
+    if(existing.category === "王府" && existing.system === "寧王府" && existing.position === "王妃"){
+      const hasOld = existing.slots.some(s => (s.name || "").includes("江月疏"));
+      if(hasOld || existing.slots.length === 0){
+        existing.status = base.status;
+        existing.note = base.note;
+        existing.slots = JSON.parse(JSON.stringify(base.slots));
+      }
+    }
+
+    // 既有職銜若少了制度總覽中的固定人物，補入；空白席位不強制補，避免洗掉使用者資料。
+    (base.slots || []).forEach(baseSlot => {
+      const name = (baseSlot.name || "").trim();
+      if(name && !hasNamedSlot(existing, name)){
+        existing.slots.push(baseSlot);
+      }
+    });
+
+    if((existing.slots || []).length === 0 && (base.slots || []).length > 0){
+      existing.slots = JSON.parse(JSON.stringify(base.slots));
+    }
+  });
+
+  return list;
+}
+function loadData(){
+  try{
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if(saved){
+      const merged = mergeWithInitial(JSON.parse(saved));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      return merged;
+    }
+  }catch(e){}
+  return initialData;
+}
+function saveData(){localStorage.setItem(STORAGE_KEY, JSON.stringify(data));}
+function esc(str){return String(str ?? "").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
+function normalizeNum(n){const x=Number(n);return Number.isFinite(x)?x:0;}
+function filledCount(item){return (item.slots || []).filter(s=>s.name && s.name.trim()).length;}
+function vacancy(item){
+  const q=normalizeNum(item.quota);
+  if(q===0) return "不限";
+  return Math.max(q - filledCount(item),0);
+}
+function positionStatus(item){
+  if(item.status && item.status !== "空缺") return item.status;
+  const v=vacancy(item);
+  if(v==="不限") return filledCount(item)>0 ? "在任" : "空缺";
+  return v>0 ? "空缺" : "在任";
+}
+function toast(msg="已儲存"){
+  const el=document.getElementById("toast");
+  el.textContent=msg;el.classList.add("show");
+  setTimeout(()=>el.classList.remove("show"),1400);
+}
+function initOptions(){
+  const categoryFilter=document.getElementById("categoryFilter");
+  const statusFilter=document.getElementById("statusFilter");
+  const fCategory=document.getElementById("fCategory");
+  const fStatus=document.getElementById("fStatus");
+  categories.forEach(c=>{
+    categoryFilter.insertAdjacentHTML("beforeend",`<option value="${c}">${c}</option>`);
+    fCategory.insertAdjacentHTML("beforeend",`<option value="${c}">${c}</option>`);
+  });
+  statuses.forEach(s=>{
+    statusFilter.insertAdjacentHTML("beforeend",`<option value="${s}">${s}</option>`);
+    fStatus.insertAdjacentHTML("beforeend",`<option value="${s}">${s}</option>`);
+  });
+}
+function filteredData(){
+  const q=document.getElementById("searchInput").value.trim().toLowerCase();
+  const catFilter=document.getElementById("categoryFilter").value;
+  const statusFilter=document.getElementById("statusFilter").value;
+  return data.filter(item=>{
+    const matchCat=currentCategory==="全部" || item.category===currentCategory;
+    const matchCat2=catFilter==="全部" || item.category===catFilter;
+    const pStatus=positionStatus(item);
+    const slotStatus=(item.slots || []).some(s=>s.status===statusFilter);
+    const matchStatus=statusFilter==="全部" || pStatus===statusFilter || slotStatus;
+    const hay=JSON.stringify(item).toLowerCase();
+    const matchQ=!q || hay.includes(q);
+    return matchCat && matchCat2 && matchStatus && matchQ;
+  });
+}
+function renderStats(){
+  const items=filteredData();
+  const total=items.length;
+  const filled=items.reduce((sum,i)=>sum+filledCount(i),0);
+  const quota=items.reduce((sum,i)=>normalizeNum(i.quota)===0?sum:sum+normalizeNum(i.quota),0);
+  const vacant=items.reduce((sum,i)=>{
+    const v=vacancy(i);return v==="不限"?sum:sum+normalizeNum(v);
+  },0);
+  const pending=items.filter(i=>["待議","待定","已定未冊","疑案中"].includes(positionStatus(i)) || (i.slots||[]).some(s=>["待議","待定","已定未冊","疑案中"].includes(s.status))).length;
+  const stats=[["職銜筆數",total],["固定定員",quota],["已填人物",filled],["固定空缺",vacant],["待處理",pending]];
+  document.getElementById("stats").innerHTML=stats.map(([label,num])=>`
+    <div class="stat-card">
+      <div class="stat-label">${label}</div>
+      <div class="stat-num">${num}</div>
+    </div>
+  `).join("");
+}
+function renderSections(){
+  const items=filteredData();
+  const grouped={};
+  items.forEach(item=>{(grouped[item.category] ||= []).push(item);});
+  const order=currentCategory==="全部"?categories:[currentCategory];
+  const html=order.filter(cat=>grouped[cat]?.length).map(cat=>{
+    const arr=grouped[cat];
+    const vacant=arr.reduce((sum,i)=>{const v=vacancy(i);return v==="不限"?sum:sum+normalizeNum(v)},0);
+    return `
+      <section>
+        <div class="section-head">
+          <div>
+            <div class="section-title">${cat}卷</div>
+            <div class="section-meta">共 ${arr.length} 個職銜｜固定空缺 ${vacant}｜點開職銜查看席位與人物</div>
+          </div>
+          <button class="btn sm" onclick="quickAdd('${cat}')">新增${cat}職銜</button>
+        </div>
+        <div class="position-list">${arr.map(positionHtml).join("")}</div>
+      </section>
+    `;
+  }).join("");
+  document.getElementById("sections").innerHTML=html || `<div class="stat-card" style="justify-content:center">目前沒有符合條件的卷宗資料。</div>`;
+}
+
+function positionHtml(item){
+  const isOpen=openIds.has(item.id);
+  const pStatus=positionStatus(item);
+  const v=vacancy(item);
+  const filledNames=(item.slots||[]).filter(s=>s.name&&s.name.trim()).map(s=>s.name).join("、");
+  const quotaLabel=item.quota===0?"不限":item.quota;
+
+  return `
+    <article class="position-card ${isOpen?'open':''}" data-id="${item.id}">
+      <div class="position-summary" onclick="toggleOpen('${item.id}')">
+        <div class="ps-cat">${esc(item.category)}</div>
+        <div class="ps-main">
+          <span class="ps-position">${esc(item.position||"—")}</span>
+          ${item.system?`<span class="ps-system">${esc(item.system)}</span>`:''}
+          ${item.rank?`<span class="ps-rank">${esc(item.rank)}</span>`:''}
+          ${filledNames?`<span class="ps-occupants" title="在任人物">▪ ${esc(filledNames)}</span>`:''}
+        </div>
+        <div class="ps-status">
+          <span class="status-pill status-${pStatus}">${pStatus}</span>
+        </div>
+        <div class="ps-actions" onclick="event.stopPropagation()">
+          <button class="btn sm primary" onclick="toggleOpen('${item.id}')">${isOpen?'收合':'展開'}</button>
+          <button class="btn sm" onclick="editPosition('${item.id}')">編輯</button>
+          <button class="btn sm danger" onclick="deletePosition('${item.id}')">刪除</button>
+        </div>
+      </div>
+      <div class="details">
+        <div class="details-top">
+          <div>
+            <div class="details-title">席位與人物詳情</div>
+            <div class="details-note">${esc(item.note || "可在此分席填寫人物，不必把多人塞進同一格。")}</div>
+          </div>
+          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+            <div class="info-row" style="margin:0;padding:.4rem .7rem;font-size:.8rem">
+              <span style="color:var(--muted);font-size:.7rem;letter-spacing:.15em">定員</span>
+              <strong>${quotaLabel}</strong>
+              <span style="color:var(--muted);font-size:.7rem;letter-spacing:.15em;margin-left:.5rem">已填</span>
+              <strong>${filledCount(item)}</strong>
+              <span style="color:var(--muted);font-size:.7rem;letter-spacing:.15em;margin-left:.5rem">空缺</span>
+              <strong>${v}</strong>
+            </div>
+            <button class="btn sm gold" onclick="addSlot('${item.id}')">新增席位</button>
+          </div>
+        </div>
+        <div class="slot-list">
+          ${(item.slots && item.slots.length) ? item.slots.map((s,idx)=>slotHtml(item,s,idx)).join("") : `<div class="empty-slot">目前沒有席位。可按「新增席位」新增。</div>`}
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function slotHtml(item,s,idx){
+  const label = s.name && s.name.trim() ? s.name : `第 ${idx+1} 席空缺`;
+  const isEmpty = !(s.name && s.name.trim());
+  return `
+    <div class="slot-card">
+      <div class="slot-top">
+        <div class="${isEmpty?'slot-empty-name slot-name':'slot-name'}">${esc(label)}</div>
+        <div style="display:flex;gap:.35rem;align-items:center;flex-wrap:wrap">
+          <span class="status-pill status-${s.status}">${esc(s.status)}</span>
+          <button class="btn sm danger" onclick="deleteSlot('${item.id}','${s.id}')">刪除此席</button>
+        </div>
+      </div>
+      <div class="slot-grid">
+        <label>人物姓名<input value="${esc(s.name)}" placeholder="空白即為空缺" onchange="updateSlot('${item.id}','${s.id}','name',this.value)"></label>
+        <label>年齡<input value="${esc(s.age)}" onchange="updateSlot('${item.id}','${s.id}','age',this.value)"></label>
+        <label>出身／家族<input value="${esc(s.origin)}" onchange="updateSlot('${item.id}','${s.id}','origin',this.value)"></label>
+        <label>狀態<select onchange="updateSlot('${item.id}','${s.id}','status',this.value)">
+          ${statuses.map(st=>`<option value="${esc(st)}" ${st===s.status?'selected':''}>${esc(st)}</option>`).join("")}
+        </select></label>
+        <label class="wide">關係／子女<input value="${esc(s.relation)}" onchange="updateSlot('${item.id}','${s.id}','relation',this.value)"></label>
+        <label>居所／院落<input value="${esc(s.residence)}" onchange="updateSlot('${item.id}','${s.id}','residence',this.value)"></label>
+        <label class="full">備註<textarea onchange="updateSlot('${item.id}','${s.id}','note',this.value)">${esc(s.note)}</textarea></label>
+      </div>
+    </div>
+  `;
+}
+
+function updatePosition(id,key,value){
+  const item=data.find(i=>i.id===id); if(!item) return;
+  if(key==="quota"){item[key]=normalizeNum(value);}else{item[key]=value;}
+  saveData(); render(); toast("已更新");
+}
+function updateSlot(itemId,slotId,key,value){
+  const item=data.find(i=>i.id===itemId); if(!item) return;
+  const s=(item.slots || []).find(x=>x.id===slotId); if(!s) return;
+  s[key]=value;
+  saveData(); render(); toast("已更新");
+}
+function toggleOpen(id){
+  openIds.has(id) ? openIds.delete(id) : openIds.add(id);
+  render();
+}
+function addSlot(id){
+  const item=data.find(i=>i.id===id); if(!item) return;
+  item.slots ||= [];
+  item.slots.push(slot());
+  openIds.add(id);
+  saveData(); render(); toast("已新增席位");
+}
+function deleteSlot(itemId,slotId){
+  const item=data.find(i=>i.id===itemId); if(!item) return;
+  if(confirm("確定刪除此席位／人物嗎？")){
+    item.slots=(item.slots || []).filter(s=>s.id!==slotId);
+    saveData(); render(); toast("已刪除");
+  }
+}
+function clearForm(){
+  editingId=null;
+  document.getElementById("fCategory").value=currentCategory==="全部"?"後宮":currentCategory;
+  document.getElementById("fSystem").value="";
+  document.getElementById("fPosition").value="";
+  document.getElementById("fRank").value="";
+  document.getElementById("fQuota").value=1;
+  document.getElementById("fStatus").value="空缺";
+  document.getElementById("fNote").value="";
+}
+function showForm(){document.getElementById("formPanel").classList.add("show");window.scrollTo({top:0,behavior:"smooth"});}
+function hideForm(){document.getElementById("formPanel").classList.remove("show");}
+function quickAdd(cat){clearForm();document.getElementById("fCategory").value=cat;showForm();}
+function editPosition(id){
+  const item=data.find(i=>i.id===id); if(!item) return;
+  editingId=id;
+  document.getElementById("fCategory").value=item.category;
+  document.getElementById("fSystem").value=item.system;
+  document.getElementById("fPosition").value=item.position;
+  document.getElementById("fRank").value=item.rank;
+  document.getElementById("fQuota").value=item.quota;
+  document.getElementById("fStatus").value=item.status;
+  document.getElementById("fNote").value=item.note;
+  showForm();
+}
+function saveForm(){
+  const quota=normalizeNum(document.getElementById("fQuota").value);
+  const item={
+    id: editingId || uid(),
+    category:document.getElementById("fCategory").value,
+    system:document.getElementById("fSystem").value,
+    position:document.getElementById("fPosition").value,
+    rank:document.getElementById("fRank").value,
+    quota,
+    status:document.getElementById("fStatus").value,
+    note:document.getElementById("fNote").value,
+    slots:[]
+  };
+  if(!item.position.trim()){alert("請至少填寫職位／名分。");return;}
+  if(editingId){
+    const old=data.find(i=>i.id===editingId);
+    item.slots=old?.slots || [];
+    data=data.map(i=>i.id===editingId?item:i);
+  }else{
+    if(quota>0){for(let i=0;i<quota;i++) item.slots.push(slot());}
+    data.push(item);
+    openIds.add(item.id);
+  }
+  saveData(); clearForm(); hideForm(); render(); toast("已儲存");
+}
+function deletePosition(id){
+  const item=data.find(i=>i.id===id); if(!item) return;
+  if(confirm(`確定刪除「${item.system}／${item.position}」整個職銜嗎？`)){
+    data=data.filter(i=>i.id!==id);
+    openIds.delete(id);
+    saveData(); render(); toast("已刪除");
+  }
+}
+function exportJson(){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download="大周名位卷宗資料_展卷版.json";
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+function importJson(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const imported=JSON.parse(e.target.result);
+      if(!Array.isArray(imported)) throw new Error("格式錯誤");
+      data=imported.map(i=>({id:i.id||uid(), slots:(i.slots||[]).map(s=>({id:s.id||uid(),...s})), ...i}));
+      saveData(); render(); toast("已匯入");
+    }catch(err){alert("匯入失敗：請確認是本工具匯出的 JSON 檔。");}
+  };
+  reader.readAsText(file);
+}
+function resetData(){
+  if(confirm("確定要重置為初始資料嗎？目前填寫內容會被清除。")){
+    localStorage.removeItem(STORAGE_KEY);
+    data=JSON.parse(JSON.stringify(initialData)).map(i=>({...i,id:uid(),slots:(i.slots||[]).map(s=>({...s,id:uid()}))}));
+    openIds.clear();
+    saveData(); render(); toast("已重置");
+  }
+}
+function render(){renderStats();renderSections();}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  initOptions(); render();
+  document.querySelectorAll(".nav-btn").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      currentCategory=btn.dataset.category;
+      render();
+    });
+  });
+  document.getElementById("searchInput").addEventListener("input",render);
+  document.getElementById("categoryFilter").addEventListener("change",render);
+  document.getElementById("statusFilter").addEventListener("change",render);
+  document.getElementById("showAdd").addEventListener("click",()=>{clearForm();showForm();});
+  document.getElementById("cancelForm").addEventListener("click",()=>{clearForm();hideForm();});
+  document.getElementById("saveForm").addEventListener("click",saveForm);
+  document.getElementById("exportJson").addEventListener("click",exportJson);
+  document.getElementById("importBtn").addEventListener("click",()=>document.getElementById("importFile").click());
+  document.getElementById("importFile").addEventListener("change",e=>{const f=e.target.files[0]; if(f) importJson(f); e.target.value="";});
+  document.getElementById("resetData").addEventListener("click",resetData);
+});
+
+window.quickAdd=quickAdd;
+window.toggleOpen=toggleOpen;
+window.editPosition=editPosition;
+window.deletePosition=deletePosition;
+window.updatePosition=updatePosition;
+window.updateSlot=updateSlot;
+window.addSlot=addSlot;
+window.deleteSlot=deleteSlot;
+</script>
+</body>
+</html>
